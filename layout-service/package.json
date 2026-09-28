@@ -1,0 +1,14 @@
+{
+  "name": "bpmn-lab-layout-service",
+  "private": true,
+  "version": "0.1.0",
+  "description": "BPMN DI auto-layout service",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "bpmn-auto-layout": "2.0.0-alpha.2",
+    "express": "4.21.2"
+  }
+}

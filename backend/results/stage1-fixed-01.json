@@ -1,0 +1,772 @@
+{
+  "strategy": "semantic",
+  "dataset": "D:\\研究生\\组会汇报\\2026-7\\pmo-dataset",
+  "summary": {
+    "total": 1,
+    "successful": 0,
+    "failed": 1
+  },
+  "results": [
+    {
+      "sample": "01",
+      "success": false,
+      "stage": "SEGMENT_COMMITTED",
+      "durationSeconds": 178.35,
+      "errorType": "ValueError",
+      "error": "终局校验失败",
+      "segments": 4,
+      "repairs": 6,
+      "llmCalls": 18,
+      "llmUsage": [
+        {
+          "agent": "semantic_resolver",
+          "usage": {
+            "completion_tokens": 2583,
+            "prompt_tokens": 209,
+            "total_tokens": 2792,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2256,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 209
+          },
+          "latencyMs": 13768,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "planner",
+          "usage": {
+            "completion_tokens": 814,
+            "prompt_tokens": 216,
+            "total_tokens": 1030,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 713,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 216
+          },
+          "latencyMs": 5203,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 268,
+            "prompt_tokens": 1125,
+            "total_tokens": 1393,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 107,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 229
+          },
+          "latencyMs": 3238,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 6187,
+            "prompt_tokens": 846,
+            "total_tokens": 7033,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 6177,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 256
+            },
+            "prompt_cache_hit_tokens": 256,
+            "prompt_cache_miss_tokens": 590
+          },
+          "latencyMs": 31848,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 909,
+            "prompt_tokens": 1431,
+            "total_tokens": 2340,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 664,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 663
+          },
+          "latencyMs": 4163,
+          "toolCallCount": 2
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 1837,
+            "prompt_tokens": 1582,
+            "total_tokens": 3419,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1534,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 1582
+          },
+          "latencyMs": 9394,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 1138,
+            "prompt_tokens": 2864,
+            "total_tokens": 4002,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 780,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1840
+          },
+          "latencyMs": 5462,
+          "toolCallCount": 2
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 640,
+            "prompt_tokens": 2766,
+            "total_tokens": 3406,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 302,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 2304
+            },
+            "prompt_cache_hit_tokens": 2304,
+            "prompt_cache_miss_tokens": 462
+          },
+          "latencyMs": 3496,
+          "toolCallCount": 2
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 1820,
+            "prompt_tokens": 2873,
+            "total_tokens": 4693,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1535,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 2304
+            },
+            "prompt_cache_hit_tokens": 2304,
+            "prompt_cache_miss_tokens": 569
+          },
+          "latencyMs": 8832,
+          "toolCallCount": 2
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 3031,
+            "prompt_tokens": 1918,
+            "total_tokens": 4949,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 3021,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 1150
+          },
+          "latencyMs": 15371,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 1738,
+            "prompt_tokens": 1956,
+            "total_tokens": 3694,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1469,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 1188
+          },
+          "latencyMs": 8420,
+          "toolCallCount": 2
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 2319,
+            "prompt_tokens": 3408,
+            "total_tokens": 5727,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2209,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 3408
+          },
+          "latencyMs": 11500,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 231,
+            "prompt_tokens": 4547,
+            "total_tokens": 4778,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 40,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 3651
+          },
+          "latencyMs": 2007,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 670,
+            "prompt_tokens": 4494,
+            "total_tokens": 5164,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 535,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 3968
+            },
+            "prompt_cache_hit_tokens": 3968,
+            "prompt_cache_miss_tokens": 526
+          },
+          "latencyMs": 3856,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 290,
+            "prompt_tokens": 4556,
+            "total_tokens": 4846,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 75,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 3584
+            },
+            "prompt_cache_hit_tokens": 3584,
+            "prompt_cache_miss_tokens": 972
+          },
+          "latencyMs": 1751,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 3216,
+            "prompt_tokens": 3563,
+            "total_tokens": 6779,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 3057,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1792
+            },
+            "prompt_cache_hit_tokens": 1792,
+            "prompt_cache_miss_tokens": 1771
+          },
+          "latencyMs": 17049,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 486,
+            "prompt_tokens": 2723,
+            "total_tokens": 3209,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 249,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 1955
+          },
+          "latencyMs": 2357,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 6232,
+            "prompt_tokens": 5575,
+            "total_tokens": 11807,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 6222,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 5575
+          },
+          "latencyMs": 30599,
+          "toolCallCount": 0
+        }
+      ],
+      "issues": [
+        {
+          "code": "UNPAIRED_GATEWAY",
+          "message": "最终流程存在未配对网关",
+          "elementIds": [
+            "gateway_customer_interest_check"
+          ],
+          "sourceSentences": [],
+          "severity": "error"
+        },
+        {
+          "code": "UNPAIRED_GATEWAY",
+          "message": "最终流程存在未配对网关",
+          "elementIds": [
+            "gateway_customer_quote_approval"
+          ],
+          "sourceSentences": [],
+          "severity": "error"
+        }
+      ],
+      "edits": [
+        {
+          "name": "add_linear_sequence",
+          "arguments": {
+            "predecessorId": "task_place_order",
+            "nodes": [
+              {
+                "id": "task_record_order_in_system",
+                "kind": "task",
+                "name": "在系统中记录订单",
+                "sourceSentences": [
+                  "S5"
+                ],
+                "taskType": "task"
+              },
+              {
+                "id": "task_send_order_confirmation",
+                "kind": "task",
+                "name": "向客户发送订单确认",
+                "sourceSentences": [
+                  "S5"
+                ],
+                "taskType": "task"
+              },
+              {
+                "id": "end_order_placed_confirmed",
+                "kind": "event",
+                "name": "订单成功提交并确认，流程结束",
+                "sourceSentences": [
+                  "S6"
+                ],
+                "eventType": "end",
+                "trigger": "none",
+                "eventRole": null
+              }
+            ]
+          }
+        }
+      ],
+      "repairHistory": [
+        {
+          "attempt": 1,
+          "issues": [
+            {
+              "code": "MISSING_FLOW_CONNECTION",
+              "message": "候选图新增了“判断客户是否有意向”网关和“引导客户选择合适的产品或服务”任务，但没有添加任何边将其与历史流程中的开放节点“收集客户信息并解答疑问”连接，导致 S3 中“在收集信息并解答疑问之后判断客户是否有意向”的顺序关系未表达，也未与历史流程衔接。",
+              "elementIds": [
+                "task_collect_customer_information",
+                "gateway_customer_interest_check",
+                "task_guide_product_selection"
+              ],
+              "sourceSentences": [
+                "S2",
+                "S3"
+              ],
+              "severity": "error"
+            },
+            {
+              "code": "MISSING_EXCLUSIVE_BRANCH",
+              "message": "“判断客户是否有意向”被建模为排他网关，但候选图未给出任何出向条件边或默认/否定分支，S3 中“如果客户感兴趣，则引导其选择产品或服务”的条件选择关系未表达。",
+              "elementIds": [
+                "gateway_customer_interest_check",
+                "task_guide_product_selection"
+              ],
+              "sourceSentences": [
+                "S3"
+              ],
+              "severity": "error"
+            }
+          ],
+          "edits": [
+            {
+              "name": "add_node",
+              "arguments": {
+                "id": "gateway_customer_interest_check",
+                "kind": "gateway",
+                "name": "判断客户是否有意向",
+                "gatewayType": "exclusive",
+                "role": "split",
+                "sourceSentences": [
+                  "S3"
+                ]
+              }
+            },
+            {
+              "name": "add_node",
+              "arguments": {
+                "id": "task_guide_product_selection",
+                "kind": "task",
+                "name": "引导客户选择合适的产品或服务",
+                "taskType": "task",
+                "sourceSentences": [
+                  "S3"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "issues": [
+            {
+              "code": "EDIT_APPLICATION_FAILED",
+              "message": "工具编辑无法应用：1 validation error for Edge\ncondition.label\n  Field required [type=missing, input_value={'expression': '客户感兴趣'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+              "elementIds": [],
+              "sourceSentences": [
+                "S3"
+              ],
+              "severity": "error"
+            }
+          ],
+          "edits": [
+            {
+              "name": "add_edge",
+              "arguments": {
+                "id": "flow_task_collect_customer_information_to_gateway_customer_interest_check",
+                "source": "task_collect_customer_information",
+                "target": "gateway_customer_interest_check",
+                "sourceSentences": [
+                  "S3"
+                ],
+                "issueId": "MISSING_FLOW_CONNECTION"
+              }
+            },
+            {
+              "name": "add_edge",
+              "arguments": {
+                "id": "flow_gateway_customer_interest_check_to_task_guide_product_selection",
+                "source": "gateway_customer_interest_check",
+                "target": "task_guide_product_selection",
+                "condition": {
+                  "expression": "客户感兴趣"
+                },
+                "isDefault": false,
+                "sourceSentences": [
+                  "S3"
+                ],
+                "issueId": "MISSING_EXCLUSIVE_BRANCH"
+              }
+            }
+          ]
+        },
+        {
+          "attempt": 3,
+          "issues": [
+            {
+              "code": "GATEWAY_DEGREE",
+              "message": "已形成的分叉或汇合至少需要两条流",
+              "elementIds": [
+                "gateway_customer_interest_check"
+              ],
+              "sourceSentences": [],
+              "severity": "error"
+            }
+          ],
+          "edits": [
+            {
+              "name": "add_edge",
+              "arguments": {
+                "id": "flow_task_collect_customer_information_to_gateway_customer_interest_check",
+                "source": "task_collect_customer_information",
+                "target": "gateway_customer_interest_check",
+                "sourceSentences": [
+                  "S3"
+                ],
+                "condition": null,
+                "isDefault": false
+              }
+            },
+            {
+              "name": "add_edge",
+              "arguments": {
+                "id": "flow_gateway_customer_interest_check_to_task_guide_product_selection",
+                "source": "gateway_customer_interest_check",
+                "target": "task_guide_product_selection",
+                "sourceSentences": [
+                  "S3"
+                ],
+                "condition": {
+                  "label": "客户感兴趣",
+                  "expression": "客户感兴趣"
+                },
+                "isDefault": false
+              }
+            }
+          ]
+        },
+        {
+          "attempt": 1,
+          "issues": [
+            {
+              "code": "MISSING_RELATION",
+              "message": "S4 表明客户批准报价后，流程应进入订单提交；但候选图中缺少从“判断客户是否批准报价”网关到“提交订单”任务的条件流，导致 task_place_order 孤立，审批通过后的主路径未被表达。",
+              "elementIds": [
+                "gateway_customer_quote_approval",
+                "task_place_order"
+              ],
+              "sourceSentences": [
+                "S4"
+              ],
+              "severity": "error"
+            }
+          ],
+          "edits": [
+            {
+              "name": "add_linear_sequence",
+              "arguments": {
+                "predecessorId": "task_guide_product_selection",
+                "nodes": [
+                  {
+                    "id": "task_provide_quote",
+                    "kind": "task",
+                    "name": "销售代表提供报价",
+                    "sourceSentences": [
+                      "S4"
+                    ],
+                    "taskType": "task"
+                  },
+                  {
+                    "id": "gateway_customer_quote_approval",
+                    "kind": "gateway",
+                    "name": "判断客户是否批准报价",
+                    "sourceSentences": [
+                      "S4"
+                    ],
+                    "gatewayType": "exclusive",
+                    "role": "split",
+                    "pairId": null
+                  }
+                ]
+              }
+            },
+            {
+              "name": "add_node",
+              "arguments": {
+                "id": "task_place_order",
+                "kind": "task",
+                "name": "提交订单",
+                "sourceSentences": [
+                  "S4"
+                ],
+                "taskType": "task"
+              }
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "issues": [
+            {
+              "code": "GATEWAY_DEGREE",
+              "message": "已形成的分叉或汇合至少需要两条流",
+              "elementIds": [
+                "gateway_customer_quote_approval"
+              ],
+              "sourceSentences": [],
+              "severity": "error"
+            }
+          ],
+          "edits": [
+            {
+              "name": "add_edge",
+              "arguments": {
+                "id": "flow_gateway_customer_quote_approval_to_task_place_order",
+                "source": "gateway_customer_quote_approval",
+                "target": "task_place_order",
+                "condition": {
+                  "label": "客户已批准报价",
+                  "expression": "客户已批准报价"
+                },
+                "isDefault": false,
+                "sourceSentences": [
+                  "S4"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "attempt": 3,
+          "issues": [
+            {
+              "code": "GATEWAY_DEGREE",
+              "message": "已形成的分叉或汇合至少需要两条流",
+              "elementIds": [
+                "gateway_customer_quote_approval"
+              ],
+              "sourceSentences": [],
+              "severity": "error"
+            }
+          ],
+          "edits": [
+            {
+              "name": "add_node",
+              "arguments": {
+                "id": "end_quote_not_approved",
+                "kind": "event",
+                "name": "客户未批准报价，流程结束",
+                "sourceSentences": [
+                  "S4"
+                ],
+                "eventType": "end",
+                "trigger": "none"
+              }
+            }
+          ]
+        }
+      ],
+      "groundTruth": {
+        "tasks": 8,
+        "events": 2,
+        "gateways": 6,
+        "sequenceFlows": 18
+      }
+    }
+  ]
+}

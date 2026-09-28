@@ -1,0 +1,561 @@
+{
+  "strategy": "semantic",
+  "dataset": "D:\\研究生\\组会汇报\\2026-7\\pmo-dataset",
+  "summary": {
+    "total": 1,
+    "successful": 1,
+    "failed": 0
+  },
+  "results": [
+    {
+      "sample": "54",
+      "success": true,
+      "stage": "COMPLETED",
+      "durationSeconds": 119.393,
+      "segments": 2,
+      "nodes": 8,
+      "edges": 7,
+      "repairs": 5,
+      "llmCalls": 13,
+      "llmUsage": [
+        {
+          "agent": "semantic_resolver",
+          "usage": {
+            "completion_tokens": 3887,
+            "prompt_tokens": 151,
+            "total_tokens": 4038,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 3736,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 151
+          },
+          "latencyMs": 18927,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "planner",
+          "usage": {
+            "completion_tokens": 1375,
+            "prompt_tokens": 155,
+            "total_tokens": 1530,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1322,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 155
+          },
+          "latencyMs": 7232,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 276,
+            "prompt_tokens": 1090,
+            "total_tokens": 1366,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 164,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 322
+          },
+          "latencyMs": 1905,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 796,
+            "prompt_tokens": 608,
+            "total_tokens": 1404,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 786,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 608
+          },
+          "latencyMs": 5345,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 1506,
+            "prompt_tokens": 1278,
+            "total_tokens": 2784,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1173,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 510
+          },
+          "latencyMs": 7145,
+          "toolCallCount": 3
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 5168,
+            "prompt_tokens": 2073,
+            "total_tokens": 7241,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 4801,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 1177
+          },
+          "latencyMs": 23546,
+          "toolCallCount": 2
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 3112,
+            "prompt_tokens": 1256,
+            "total_tokens": 4368,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2873,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 1256
+          },
+          "latencyMs": 15756,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 778,
+            "prompt_tokens": 2531,
+            "total_tokens": 3309,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 359,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1536
+            },
+            "prompt_cache_hit_tokens": 1536,
+            "prompt_cache_miss_tokens": 995
+          },
+          "latencyMs": 3344,
+          "toolCallCount": 3
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 2512,
+            "prompt_tokens": 1628,
+            "total_tokens": 4140,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2357,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1116
+          },
+          "latencyMs": 12834,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 358,
+            "prompt_tokens": 2791,
+            "total_tokens": 3149,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 38,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1792
+            },
+            "prompt_cache_hit_tokens": 1792,
+            "prompt_cache_miss_tokens": 999
+          },
+          "latencyMs": 1864,
+          "toolCallCount": 2
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 3079,
+            "prompt_tokens": 1786,
+            "total_tokens": 4865,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 3069,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 512
+            },
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 1274
+          },
+          "latencyMs": 15545,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 843,
+            "prompt_tokens": 4654,
+            "total_tokens": 5497,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 406,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 3758
+          },
+          "latencyMs": 3919,
+          "toolCallCount": 3
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 454,
+            "prompt_tokens": 5035,
+            "total_tokens": 5489,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 83,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 3712
+            },
+            "prompt_cache_hit_tokens": 3712,
+            "prompt_cache_miss_tokens": 1323
+          },
+          "latencyMs": 1997,
+          "toolCallCount": 3
+        }
+      ],
+      "groundTruth": {
+        "tasks": 3,
+        "events": 2,
+        "gateways": 0,
+        "sequenceFlows": 4
+      },
+      "graph": {
+        "schemaVersion": "1.0",
+        "process": {
+          "id": "process_main",
+          "name": "未命名流程"
+        },
+        "nodes": [
+          {
+            "id": "transmit_transaction_data",
+            "kind": "task",
+            "name": "传输交易数据请求",
+            "sourceSentences": [
+              "The INQ transmits the transaction data request to the IP."
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "check_request",
+            "kind": "task",
+            "name": "检查请求",
+            "sourceSentences": [
+              "The IP checks the request of the INQ."
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "evaluate_check_result",
+            "kind": "gateway",
+            "name": "根据检查结果判断答复方式",
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "exclusive",
+            "role": "split",
+            "pairId": null
+          },
+          {
+            "id": "transmit_data_answer",
+            "kind": "task",
+            "name": "传输数据",
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "reject_answer",
+            "kind": "task",
+            "name": "拒绝",
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "start_event",
+            "kind": "event",
+            "name": "开始",
+            "sourceSentences": [
+              "The INQ transmits the transaction data request to the IP."
+            ],
+            "introducedInSegment": "FINALIZATION",
+            "taskType": null,
+            "eventType": "start",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "end_transmit_data",
+            "kind": "event",
+            "name": "结束",
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "FINALIZATION",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "end_reject",
+            "kind": "event",
+            "name": "结束",
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "FINALIZATION",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          }
+        ],
+        "edges": [
+          {
+            "id": "flow_transmit_transaction_data_to_check_request",
+            "source": "transmit_transaction_data",
+            "target": "check_request",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "The IP checks the request of the INQ."
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_check_request_to_evaluate_check_result",
+            "source": "check_request",
+            "target": "evaluate_check_result",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "The IP checks the request of the INQ.",
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_evaluate_check_result_to_transmit_data_answer",
+            "source": "evaluate_check_result",
+            "target": "transmit_data_answer",
+            "condition": {
+              "label": "传输数据",
+              "expression": "检查结果为通过"
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_evaluate_check_result_to_reject_answer",
+            "source": "evaluate_check_result",
+            "target": "reject_answer",
+            "condition": {
+              "label": "拒绝",
+              "expression": "检查结果为不通过"
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_start_event_to_transmit_transaction_data",
+            "source": "start_event",
+            "target": "transmit_transaction_data",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "The INQ transmits the transaction data request to the IP."
+            ],
+            "introducedInSegment": "FINALIZATION"
+          },
+          {
+            "id": "flow_transmit_data_answer_to_end_transmit_data",
+            "source": "transmit_data_answer",
+            "target": "end_transmit_data",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "FINALIZATION"
+          },
+          {
+            "id": "flow_reject_answer_to_end_reject",
+            "source": "reject_answer",
+            "target": "end_reject",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i.e. Transmission of data or rejection."
+            ],
+            "introducedInSegment": "FINALIZATION"
+          }
+        ],
+        "metadata": {
+          "revision": 6,
+          "processedSegments": [
+            "P1",
+            "P2"
+          ],
+          "segmentationStrategy": "semantic",
+          "promptVersion": "v1"
+        }
+      }
+    }
+  ]
+}

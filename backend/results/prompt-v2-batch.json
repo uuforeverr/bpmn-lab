@@ -1,0 +1,1328 @@
+{
+  "strategy": "semantic",
+  "dataset": "D:\\研究生\\组会汇报\\2026-7\\pmo-dataset",
+  "summary": {
+    "total": 3,
+    "successful": 3,
+    "failed": 0
+  },
+  "results": [
+    {
+      "sample": "54",
+      "success": true,
+      "stage": "COMPLETED",
+      "durationSeconds": 52.547,
+      "segments": 1,
+      "nodes": 8,
+      "edges": 7,
+      "repairs": 1,
+      "llmCalls": 5,
+      "llmUsage": [
+        {
+          "agent": "semantic_resolver",
+          "usage": {
+            "completion_tokens": 5904,
+            "prompt_tokens": 151,
+            "total_tokens": 6055,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 5717,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 151
+          },
+          "latencyMs": 36422,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "planner",
+          "usage": {
+            "completion_tokens": 248,
+            "prompt_tokens": 384,
+            "total_tokens": 632,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 213,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 384
+          },
+          "latencyMs": 2048,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 1700,
+            "prompt_tokens": 1709,
+            "total_tokens": 3409,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 650,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 1709
+          },
+          "latencyMs": 6782,
+          "toolCallCount": 9
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 1341,
+            "prompt_tokens": 2522,
+            "total_tokens": 3863,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 253,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 2522
+          },
+          "latencyMs": 4288,
+          "toolCallCount": 9
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 483,
+            "prompt_tokens": 2656,
+            "total_tokens": 3139,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 473,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 2656
+          },
+          "latencyMs": 2949,
+          "toolCallCount": 0
+        }
+      ],
+      "generated": {
+        "tasks": 4,
+        "events": 3,
+        "gateways": 1,
+        "sequenceFlows": 7
+      },
+      "groundTruth": {
+        "tasks": 3,
+        "events": 2,
+        "gateways": 0,
+        "sequenceFlows": 4
+      },
+      "reviewWarnings": [],
+      "segmentPlan": [
+        {
+          "id": "P1",
+          "start": "S1",
+          "end": "S3",
+          "title": "Transaction data request transmission, examination, and response",
+          "sentenceIds": [
+            "S1",
+            "S2",
+            "S3"
+          ]
+        }
+      ],
+      "graph": {
+        "schemaVersion": "1.0",
+        "process": {
+          "id": "process_main",
+          "name": "未命名流程"
+        },
+        "nodes": [
+          {
+            "id": "start_event",
+            "kind": "event",
+            "name": "流程开始",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": null,
+            "eventType": "start",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_transmit_request",
+            "kind": "task",
+            "name": "传输交易数据请求",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_check_request",
+            "kind": "task",
+            "name": "检查交易数据请求",
+            "sourceSentences": [
+              "S2"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "gw_outcome_split",
+            "kind": "gateway",
+            "name": "检查结果判定",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "exclusive",
+            "role": "split",
+            "pairId": null
+          },
+          {
+            "id": "task_transmit_data",
+            "kind": "task",
+            "name": "传输数据",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_reject_request",
+            "kind": "task",
+            "name": "拒绝请求",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "end_data_transmitted",
+            "kind": "event",
+            "name": "数据已传输结束",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "end_request_rejected",
+            "kind": "event",
+            "name": "请求被拒绝结束",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          }
+        ],
+        "edges": [
+          {
+            "id": "flow_start_event_to_task_transmit_request",
+            "source": "start_event",
+            "target": "task_transmit_request",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "flow_task_transmit_request_to_task_check_request",
+            "source": "task_transmit_request",
+            "target": "task_check_request",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S2"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "flow_task_check_request_to_gw_outcome_split",
+            "source": "task_check_request",
+            "target": "gw_outcome_split",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "edge_gw_transmit_data",
+            "source": "gw_outcome_split",
+            "target": "task_transmit_data",
+            "condition": {
+              "label": "检查结果为传输数据",
+              "expression": null
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "edge_gw_reject",
+            "source": "gw_outcome_split",
+            "target": "task_reject_request",
+            "condition": {
+              "label": "检查结果为拒绝",
+              "expression": null
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "edge_transmit_data_end",
+            "source": "task_transmit_data",
+            "target": "end_data_transmitted",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "edge_reject_end",
+            "source": "task_reject_request",
+            "target": "end_request_rejected",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1"
+          }
+        ],
+        "metadata": {
+          "revision": 1,
+          "processedSegments": [
+            "P1"
+          ],
+          "segmentationStrategy": "semantic",
+          "promptVersion": "v2"
+        }
+      }
+    },
+    {
+      "sample": "53",
+      "success": true,
+      "stage": "COMPLETED",
+      "durationSeconds": 32.219,
+      "segments": 2,
+      "nodes": 8,
+      "edges": 7,
+      "repairs": 2,
+      "llmCalls": 8,
+      "llmUsage": [
+        {
+          "agent": "semantic_resolver",
+          "usage": {
+            "completion_tokens": 1828,
+            "prompt_tokens": 143,
+            "total_tokens": 1971,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1693,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 143
+          },
+          "latencyMs": 8879,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "planner",
+          "usage": {
+            "completion_tokens": 390,
+            "prompt_tokens": 369,
+            "total_tokens": 759,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 326,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 128
+            },
+            "prompt_cache_hit_tokens": 128,
+            "prompt_cache_miss_tokens": 241
+          },
+          "latencyMs": 2745,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 362,
+            "prompt_tokens": 1631,
+            "total_tokens": 1993,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 219,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 351
+          },
+          "latencyMs": 2175,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 310,
+            "prompt_tokens": 1938,
+            "total_tokens": 2248,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 161,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 658
+          },
+          "latencyMs": 2023,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 619,
+            "prompt_tokens": 1195,
+            "total_tokens": 1814,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 609,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 256
+            },
+            "prompt_cache_hit_tokens": 256,
+            "prompt_cache_miss_tokens": 939
+          },
+          "latencyMs": 4065,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 1015,
+            "prompt_tokens": 1964,
+            "total_tokens": 2979,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 571,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 684
+          },
+          "latencyMs": 4384,
+          "toolCallCount": 6
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 1825,
+            "prompt_tokens": 2830,
+            "total_tokens": 4655,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 456,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 1550
+          },
+          "latencyMs": 6010,
+          "toolCallCount": 12
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 207,
+            "prompt_tokens": 3368,
+            "total_tokens": 3575,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 197,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 256
+            },
+            "prompt_cache_hit_tokens": 256,
+            "prompt_cache_miss_tokens": 3112
+          },
+          "latencyMs": 1892,
+          "toolCallCount": 0
+        }
+      ],
+      "generated": {
+        "tasks": 4,
+        "events": 3,
+        "gateways": 1,
+        "sequenceFlows": 7
+      },
+      "groundTruth": {
+        "tasks": 4,
+        "events": 2,
+        "gateways": 2,
+        "sequenceFlows": 8
+      },
+      "reviewWarnings": [],
+      "segmentPlan": [
+        {
+          "id": "P1",
+          "start": "S1",
+          "end": "S1",
+          "title": "MSPN发送解雇通知",
+          "sentenceIds": [
+            "S1"
+          ]
+        },
+        {
+          "id": "P2",
+          "start": "S2",
+          "end": "S3",
+          "title": "MSPO审核并决定是否驳回或确认解雇",
+          "sentenceIds": [
+            "S2",
+            "S3"
+          ]
+        }
+      ],
+      "graph": {
+        "schemaVersion": "1.0",
+        "process": {
+          "id": "process_main",
+          "name": "未命名流程"
+        },
+        "nodes": [
+          {
+            "id": "start_mspn_process",
+            "kind": "event",
+            "name": "流程开始",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": null,
+            "eventType": "start",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_send_dismissal",
+            "kind": "task",
+            "name": "发送解雇通知",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_review_dismissal",
+            "kind": "task",
+            "name": "审核解雇通知",
+            "sourceSentences": [
+              "S2"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "gateway_mspo_decision",
+            "kind": "gateway",
+            "name": "MSPO决定",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "exclusive",
+            "role": "split",
+            "pairId": null
+          },
+          {
+            "id": "task_reject_dismissal",
+            "kind": "task",
+            "name": "驳回解雇通知",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_confirm_dismissal",
+            "kind": "task",
+            "name": "确认解雇通知",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "end_dismissal_rejected",
+            "kind": "event",
+            "name": "解雇被驳回结束",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "end_dismissal_confirmed",
+            "kind": "event",
+            "name": "解雇被确认结束",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          }
+        ],
+        "edges": [
+          {
+            "id": "flow_start_mspn_process_to_task_send_dismissal",
+            "source": "start_mspn_process",
+            "target": "task_send_dismissal",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "flow_send_dismissal_to_review_dismissal",
+            "source": "task_send_dismissal",
+            "target": "task_review_dismissal",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S2"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_review_dismissal_to_gateway_mspo_decision",
+            "source": "task_review_dismissal",
+            "target": "gateway_mspo_decision",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_gateway_mspo_decision_to_task_reject_dismissal",
+            "source": "gateway_mspo_decision",
+            "target": "task_reject_dismissal",
+            "condition": {
+              "label": "驳回解雇",
+              "expression": null
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_gateway_mspo_decision_to_task_confirm_dismissal",
+            "source": "gateway_mspo_decision",
+            "target": "task_confirm_dismissal",
+            "condition": {
+              "label": "确认解雇",
+              "expression": null
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_task_reject_dismissal_to_end_dismissal_rejected",
+            "source": "task_reject_dismissal",
+            "target": "end_dismissal_rejected",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_task_confirm_dismissal_to_end_dismissal_confirmed",
+            "source": "task_confirm_dismissal",
+            "target": "end_dismissal_confirmed",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          }
+        ],
+        "metadata": {
+          "revision": 2,
+          "processedSegments": [
+            "P1",
+            "P2"
+          ],
+          "segmentationStrategy": "semantic",
+          "promptVersion": "v2"
+        }
+      }
+    },
+    {
+      "sample": "50",
+      "success": true,
+      "stage": "COMPLETED",
+      "durationSeconds": 56.521,
+      "segments": 2,
+      "nodes": 7,
+      "edges": 7,
+      "repairs": 2,
+      "llmCalls": 9,
+      "llmUsage": [
+        {
+          "agent": "semantic_resolver",
+          "usage": {
+            "completion_tokens": 2676,
+            "prompt_tokens": 186,
+            "total_tokens": 2862,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2411,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 186
+          },
+          "latencyMs": 12443,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "planner",
+          "usage": {
+            "completion_tokens": 376,
+            "prompt_tokens": 415,
+            "total_tokens": 791,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 321,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 256
+            },
+            "prompt_cache_hit_tokens": 256,
+            "prompt_cache_miss_tokens": 159
+          },
+          "latencyMs": 2682,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 444,
+            "prompt_tokens": 1658,
+            "total_tokens": 2102,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 256,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 378
+          },
+          "latencyMs": 2124,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 298,
+            "prompt_tokens": 2013,
+            "total_tokens": 2311,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 91,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 733
+          },
+          "latencyMs": 1449,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 358,
+            "prompt_tokens": 1443,
+            "total_tokens": 1801,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 348,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 256
+            },
+            "prompt_cache_hit_tokens": 256,
+            "prompt_cache_miss_tokens": 1187
+          },
+          "latencyMs": 2563,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 1464,
+            "prompt_tokens": 2193,
+            "total_tokens": 3657,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 969,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 913
+          },
+          "latencyMs": 6098,
+          "toolCallCount": 4
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 3879,
+            "prompt_tokens": 2822,
+            "total_tokens": 6701,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 3504,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 256
+            },
+            "prompt_cache_hit_tokens": 256,
+            "prompt_cache_miss_tokens": 2566
+          },
+          "latencyMs": 20240,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 863,
+            "prompt_tokens": 4157,
+            "total_tokens": 5020,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 216,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 2877
+          },
+          "latencyMs": 3326,
+          "toolCallCount": 5
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 938,
+            "prompt_tokens": 3419,
+            "total_tokens": 4357,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 928,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1536
+            },
+            "prompt_cache_hit_tokens": 1536,
+            "prompt_cache_miss_tokens": 1883
+          },
+          "latencyMs": 5504,
+          "toolCallCount": 0
+        }
+      ],
+      "generated": {
+        "tasks": 4,
+        "events": 2,
+        "gateways": 1,
+        "sequenceFlows": 7
+      },
+      "groundTruth": {
+        "tasks": 7,
+        "events": 2,
+        "gateways": 2,
+        "sequenceFlows": 11
+      },
+      "reviewWarnings": [],
+      "segmentPlan": [
+        {
+          "id": "P1",
+          "start": "S1",
+          "end": "S2",
+          "title": "Claim examination and settlement recommendation",
+          "sentenceIds": [
+            "S1",
+            "S2"
+          ]
+        },
+        {
+          "id": "P2",
+          "start": "S3",
+          "end": "S5",
+          "title": "Senior review and decision routing",
+          "sentenceIds": [
+            "S3",
+            "S4",
+            "S5"
+          ]
+        }
+      ],
+      "graph": {
+        "schemaVersion": "1.0",
+        "process": {
+          "id": "process_main",
+          "name": "未命名流程"
+        },
+        "nodes": [
+          {
+            "id": "start_claim_registered",
+            "kind": "event",
+            "name": "理赔已登记",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": null,
+            "eventType": "start",
+            "trigger": "none",
+            "eventRole": "throw",
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_examine_claim",
+            "kind": "task",
+            "name": "审核理赔申请",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_write_settlement_recommendation",
+            "kind": "task",
+            "name": "撰写理赔结算建议",
+            "sourceSentences": [
+              "S2"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_senior_review_settlement_recommendation",
+            "kind": "task",
+            "name": "高级理赔专员复核结算建议",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "gateway_review_decision",
+            "kind": "gateway",
+            "name": "复核结论判定",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "exclusive",
+            "role": "split",
+            "pairId": null
+          },
+          {
+            "id": "task_return_claim_to_officer",
+            "kind": "task",
+            "name": "退回理赔专员",
+            "sourceSentences": [
+              "S4"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "event_claim_process_continues",
+            "kind": "event",
+            "name": "理赔处理继续",
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": "throw",
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          }
+        ],
+        "edges": [
+          {
+            "id": "flow_start_claim_registered_to_task_examine_claim",
+            "source": "start_claim_registered",
+            "target": "task_examine_claim",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "flow_task_examine_claim_to_task_write_settlement_recommendation",
+            "source": "task_examine_claim",
+            "target": "task_write_settlement_recommendation",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S2"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "flow_task_write_settlement_recommendation_to_task_senior_review_settlement_recommendation",
+            "source": "task_write_settlement_recommendation",
+            "target": "task_senior_review_settlement_recommendation",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_task_senior_review_settlement_recommendation_to_gateway_review_decision",
+            "source": "task_senior_review_settlement_recommendation",
+            "target": "gateway_review_decision",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_gateway_review_decision_to_event_claim_process_continues",
+            "source": "gateway_review_decision",
+            "target": "event_claim_process_continues",
+            "condition": {
+              "label": "OK",
+              "expression": "reviewResult == 'OK'"
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_gateway_review_decision_to_task_return_claim_to_officer",
+            "source": "gateway_review_decision",
+            "target": "task_return_claim_to_officer",
+            "condition": {
+              "label": "Not OK",
+              "expression": "reviewResult == 'Not OK'"
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S4"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_task_return_claim_to_officer_to_task_write_settlement_recommendation",
+            "source": "task_return_claim_to_officer",
+            "target": "task_write_settlement_recommendation",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S4"
+            ],
+            "introducedInSegment": "P2"
+          }
+        ],
+        "metadata": {
+          "revision": 3,
+          "processedSegments": [
+            "P1",
+            "P2"
+          ],
+          "segmentationStrategy": "semantic",
+          "promptVersion": "v2"
+        }
+      }
+    }
+  ]
+}

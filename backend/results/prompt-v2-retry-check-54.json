@@ -1,0 +1,458 @@
+{
+  "strategy": "semantic",
+  "dataset": "D:\\研究生\\组会汇报\\2026-7\\pmo-dataset",
+  "summary": {
+    "total": 1,
+    "successful": 1,
+    "failed": 0
+  },
+  "results": [
+    {
+      "sample": "54",
+      "success": true,
+      "stage": "COMPLETED",
+      "durationSeconds": 82.327,
+      "segments": 2,
+      "nodes": 8,
+      "edges": 7,
+      "repairs": 1,
+      "llmCalls": 7,
+      "llmUsage": [
+        {
+          "agent": "semantic_resolver",
+          "usage": {
+            "completion_tokens": 3015,
+            "prompt_tokens": 151,
+            "total_tokens": 3166,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2864,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 151
+          },
+          "latencyMs": 14460,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "planner",
+          "usage": {
+            "completion_tokens": 154,
+            "prompt_tokens": 416,
+            "total_tokens": 570,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 97,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 128
+            },
+            "prompt_cache_hit_tokens": 128,
+            "prompt_cache_miss_tokens": 288
+          },
+          "latencyMs": 1708,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 279,
+            "prompt_tokens": 1749,
+            "total_tokens": 2028,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 123,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1408
+            },
+            "prompt_cache_hit_tokens": 1408,
+            "prompt_cache_miss_tokens": 341
+          },
+          "latencyMs": 1704,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 237,
+            "prompt_tokens": 1199,
+            "total_tokens": 1436,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 227,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 256
+            },
+            "prompt_cache_hit_tokens": 256,
+            "prompt_cache_miss_tokens": 943
+          },
+          "latencyMs": 2180,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 2439,
+            "prompt_tokens": 2084,
+            "total_tokens": 4523,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1707,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1408
+            },
+            "prompt_cache_hit_tokens": 1408,
+            "prompt_cache_miss_tokens": 676
+          },
+          "latencyMs": 9750,
+          "toolCallCount": 6
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 1596,
+            "prompt_tokens": 3520,
+            "total_tokens": 5116,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 855,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 2240
+          },
+          "latencyMs": 6431,
+          "toolCallCount": 7
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 1024,
+            "prompt_tokens": 3016,
+            "total_tokens": 4040,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1014,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 256
+            },
+            "prompt_cache_hit_tokens": 256,
+            "prompt_cache_miss_tokens": 2760
+          },
+          "latencyMs": 6173,
+          "toolCallCount": 0
+        }
+      ],
+      "generated": {
+        "tasks": 4,
+        "events": 3,
+        "gateways": 1,
+        "sequenceFlows": 7
+      },
+      "groundTruth": {
+        "tasks": 3,
+        "events": 2,
+        "gateways": 0,
+        "sequenceFlows": 4
+      },
+      "reviewWarnings": [],
+      "agentFailures": [
+        {
+          "agent": "semantic_resolver",
+          "attempt": 1,
+          "error": "semantic_resolver returned empty content"
+        }
+      ],
+      "segmentPlan": [
+        {
+          "id": "P1",
+          "start": "S1",
+          "end": "S1",
+          "title": "INQ发起交易数据请求",
+          "sentenceIds": [
+            "S1"
+          ]
+        },
+        {
+          "id": "P2",
+          "start": "S2",
+          "end": "S3",
+          "title": "IP检查请求并作出响应",
+          "sentenceIds": [
+            "S2",
+            "S3"
+          ]
+        }
+      ],
+      "graph": {
+        "schemaVersion": "1.0",
+        "process": {
+          "id": "process_main",
+          "name": "未命名流程"
+        },
+        "nodes": [
+          {
+            "id": "start_event",
+            "kind": "event",
+            "name": "流程开始",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": null,
+            "eventType": "start",
+            "trigger": "none",
+            "eventRole": "throw",
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_transmit_transaction_data_request",
+            "kind": "task",
+            "name": "INQ发送交易数据请求",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_check_inq_request",
+            "kind": "task",
+            "name": "IP检查INQ请求",
+            "sourceSentences": [
+              "S2"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "gateway_answer_split",
+            "kind": "gateway",
+            "name": "IP答复决策",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "exclusive",
+            "role": "split",
+            "pairId": null
+          },
+          {
+            "id": "task_transmit_data",
+            "kind": "task",
+            "name": "传输数据",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_reject_request",
+            "kind": "task",
+            "name": "拒绝请求",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "end_event_data_transmitted",
+            "kind": "event",
+            "name": "数据传输完成",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": "throw",
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "end_event_request_rejected",
+            "kind": "event",
+            "name": "请求被拒绝",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": "throw",
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          }
+        ],
+        "edges": [
+          {
+            "id": "flow_start_event_to_task_transmit_transaction_data_request",
+            "source": "start_event",
+            "target": "task_transmit_transaction_data_request",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "flow_task_transmit_transaction_data_request_to_task_check_inq_request",
+            "source": "task_transmit_transaction_data_request",
+            "target": "task_check_inq_request",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S2"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_task_check_inq_request_to_gateway_answer_split",
+            "source": "task_check_inq_request",
+            "target": "gateway_answer_split",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S2",
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_gateway_answer_split_to_task_transmit_data",
+            "source": "gateway_answer_split",
+            "target": "task_transmit_data",
+            "condition": {
+              "label": "检查通过，传输数据",
+              "expression": null
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_gateway_answer_split_to_task_reject_request",
+            "source": "gateway_answer_split",
+            "target": "task_reject_request",
+            "condition": {
+              "label": "检查未通过，拒绝请求",
+              "expression": null
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_task_transmit_data_to_end_event_data_transmitted",
+            "source": "task_transmit_data",
+            "target": "end_event_data_transmitted",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "flow_task_reject_request_to_end_event_request_rejected",
+            "source": "task_reject_request",
+            "target": "end_event_request_rejected",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P2"
+          }
+        ],
+        "metadata": {
+          "revision": 3,
+          "processedSegments": [
+            "P1",
+            "P2"
+          ],
+          "segmentationStrategy": "semantic",
+          "promptVersion": "v2"
+        }
+      }
+    }
+  ]
+}

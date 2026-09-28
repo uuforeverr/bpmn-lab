@@ -1,0 +1,145 @@
+{
+  "strategy": "semantic",
+  "dataset": "D:\\研究生\\组会汇报\\2026-7\\pmo-dataset",
+  "summary": {
+    "total": 1,
+    "successful": 0,
+    "failed": 1
+  },
+  "results": [
+    {
+      "sample": "01",
+      "success": false,
+      "stage": "EDITS_GENERATED",
+      "durationSeconds": 44.839,
+      "errorType": "EditError",
+      "error": "edge not found",
+      "segments": 3,
+      "repairs": 1,
+      "llmCalls": 5,
+      "llmUsage": [
+        {
+          "agent": "semantic_resolver",
+          "usage": {
+            "completion_tokens": 3148,
+            "prompt_tokens": 209,
+            "total_tokens": 3357,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2831,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 209
+          },
+          "latencyMs": 15611,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "planner",
+          "usage": {
+            "completion_tokens": 769,
+            "prompt_tokens": 216,
+            "total_tokens": 985,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 691,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 216
+          },
+          "latencyMs": 4452,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 562,
+            "prompt_tokens": 1125,
+            "total_tokens": 1687,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 318,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 1125
+          },
+          "latencyMs": 2743,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 2780,
+            "prompt_tokens": 1031,
+            "total_tokens": 3811,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2518,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 1031
+          },
+          "latencyMs": 14755,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 1593,
+            "prompt_tokens": 2281,
+            "total_tokens": 3874,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 974,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1024
+            },
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 1257
+          },
+          "latencyMs": 7271,
+          "toolCallCount": 6
+        }
+      ],
+      "groundTruth": {
+        "tasks": 8,
+        "events": 2,
+        "gateways": 6,
+        "sequenceFlows": 18
+      }
+    }
+  ]
+}

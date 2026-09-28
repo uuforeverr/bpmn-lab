@@ -1,0 +1,314 @@
+{
+  "strategy": "semantic",
+  "dataset": "D:\\研究生\\组会汇报\\2026-7\\pmo-dataset",
+  "summary": {
+    "total": 1,
+    "successful": 0,
+    "failed": 1
+  },
+  "results": [
+    {
+      "sample": "54",
+      "success": false,
+      "stage": "SEGMENT_COMMITTED",
+      "durationSeconds": 81.009,
+      "errorType": "ValueError",
+      "error": "终局校验失败",
+      "segments": 3,
+      "repairs": 0,
+      "llmCalls": 8,
+      "llmUsage": [
+        {
+          "agent": "semantic_resolver",
+          "usage": {
+            "completion_tokens": 5668,
+            "prompt_tokens": 156,
+            "total_tokens": 5824,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 5481,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 156
+          },
+          "latencyMs": 26713,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "planner",
+          "usage": {
+            "completion_tokens": 603,
+            "prompt_tokens": 160,
+            "total_tokens": 763,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 531,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 160
+          },
+          "latencyMs": 3142,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 267,
+            "prompt_tokens": 1088,
+            "total_tokens": 1355,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 92,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 320
+          },
+          "latencyMs": 1790,
+          "toolCallCount": 1
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 3291,
+            "prompt_tokens": 843,
+            "total_tokens": 4134,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 3281,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 843
+          },
+          "latencyMs": 18758,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 287,
+            "prompt_tokens": 1409,
+            "total_tokens": 1696,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 65,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 641
+          },
+          "latencyMs": 1739,
+          "toolCallCount": 2
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 499,
+            "prompt_tokens": 1576,
+            "total_tokens": 2075,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 489,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 1576
+          },
+          "latencyMs": 3550,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 1291,
+            "prompt_tokens": 1617,
+            "total_tokens": 2908,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 611,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 849
+          },
+          "latencyMs": 4950,
+          "toolCallCount": 6
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 4110,
+            "prompt_tokens": 2706,
+            "total_tokens": 6816,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 4100,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 2706
+          },
+          "latencyMs": 20350,
+          "toolCallCount": 0
+        }
+      ],
+      "issues": [
+        {
+          "code": "END_COUNT",
+          "message": "最终流程至少需要一个结束事件",
+          "elementIds": [],
+          "sourceSentences": [],
+          "severity": "error"
+        },
+        {
+          "code": "OPEN_NODE",
+          "message": "最终流程存在未连接后继的节点",
+          "elementIds": [
+            "transmit_data"
+          ],
+          "sourceSentences": [],
+          "severity": "error"
+        },
+        {
+          "code": "OPEN_NODE",
+          "message": "最终流程存在未连接后继的节点",
+          "elementIds": [
+            "reject_request"
+          ],
+          "sourceSentences": [],
+          "severity": "error"
+        }
+      ],
+      "edits": [
+        {
+          "name": "add_node",
+          "arguments": {
+            "id": "gateway_response_decision",
+            "kind": "gateway",
+            "name": "判断检查结果决定应答",
+            "gatewayType": "exclusive",
+            "role": "split",
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i."
+            ]
+          }
+        },
+        {
+          "name": "add_node",
+          "arguments": {
+            "id": "transmit_data",
+            "kind": "task",
+            "name": "传输数据",
+            "taskType": "task",
+            "sourceSentences": [
+              "Transmission of data or rejection."
+            ]
+          }
+        },
+        {
+          "name": "add_node",
+          "arguments": {
+            "id": "reject_request",
+            "kind": "task",
+            "name": "拒绝请求",
+            "taskType": "task",
+            "sourceSentences": [
+              "Transmission of data or rejection."
+            ]
+          }
+        },
+        {
+          "name": "add_edge",
+          "arguments": {
+            "id": "flow_check_request_to_gateway_response_decision",
+            "source": "check_request",
+            "target": "gateway_response_decision",
+            "sourceSentences": [
+              "The IP answers the question of the INQ depending on the outcome of the examination, i."
+            ]
+          }
+        },
+        {
+          "name": "add_edge",
+          "arguments": {
+            "id": "flow_gateway_response_decision_to_transmit_data",
+            "source": "gateway_response_decision",
+            "target": "transmit_data",
+            "sourceSentences": [
+              "Transmission of data or rejection."
+            ]
+          }
+        },
+        {
+          "name": "add_edge",
+          "arguments": {
+            "id": "flow_gateway_response_decision_to_reject_request",
+            "source": "gateway_response_decision",
+            "target": "reject_request",
+            "sourceSentences": [
+              "Transmission of data or rejection."
+            ]
+          }
+        }
+      ],
+      "repairHistory": [],
+      "groundTruth": {
+        "tasks": 3,
+        "events": 2,
+        "gateways": 0,
+        "sequenceFlows": 4
+      }
+    }
+  ]
+}

@@ -1,0 +1,766 @@
+{
+  "strategy": "semantic",
+  "dataset": "D:\\研究生\\组会汇报\\2026-7\\pmo-dataset",
+  "summary": {
+    "total": 1,
+    "successful": 1,
+    "failed": 0
+  },
+  "results": [
+    {
+      "sample": "21",
+      "success": true,
+      "stage": "COMPLETED",
+      "durationSeconds": 107.58,
+      "segments": 2,
+      "nodes": 16,
+      "edges": 18,
+      "repairs": 3,
+      "llmCalls": 9,
+      "llmUsage": [
+        {
+          "agent": "semantic_resolver",
+          "usage": {
+            "completion_tokens": 5933,
+            "prompt_tokens": 226,
+            "total_tokens": 6159,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 5503,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 226
+          },
+          "latencyMs": 27367,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "planner",
+          "usage": {
+            "completion_tokens": 1431,
+            "prompt_tokens": 531,
+            "total_tokens": 1962,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1373,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 531
+          },
+          "latencyMs": 7779,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 2988,
+            "prompt_tokens": 1971,
+            "total_tokens": 4959,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2392,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 384
+            },
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 1587
+          },
+          "latencyMs": 13417,
+          "toolCallCount": 4
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 1430,
+            "prompt_tokens": 2279,
+            "total_tokens": 3709,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 546,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 999
+          },
+          "latencyMs": 5477,
+          "toolCallCount": 7
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 578,
+            "prompt_tokens": 2501,
+            "total_tokens": 3079,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 568,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 128
+            },
+            "prompt_cache_hit_tokens": 128,
+            "prompt_cache_miss_tokens": 2373
+          },
+          "latencyMs": 3449,
+          "toolCallCount": 0
+        },
+        {
+          "agent": "generator",
+          "usage": {
+            "completion_tokens": 3787,
+            "prompt_tokens": 3069,
+            "total_tokens": 6856,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2522,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1536
+            },
+            "prompt_cache_hit_tokens": 1536,
+            "prompt_cache_miss_tokens": 1533
+          },
+          "latencyMs": 15342,
+          "toolCallCount": 10
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 3922,
+            "prompt_tokens": 4602,
+            "total_tokens": 8524,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 1279,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 1280
+            },
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 3322
+          },
+          "latencyMs": 12215,
+          "toolCallCount": 23
+        },
+        {
+          "agent": "repair",
+          "usage": {
+            "completion_tokens": 484,
+            "prompt_tokens": 8307,
+            "total_tokens": 8791,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 134,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 3584
+            },
+            "prompt_cache_hit_tokens": 3584,
+            "prompt_cache_miss_tokens": 4723
+          },
+          "latencyMs": 2166,
+          "toolCallCount": 4
+        },
+        {
+          "agent": "reviewer",
+          "usage": {
+            "completion_tokens": 3402,
+            "prompt_tokens": 6013,
+            "total_tokens": 9415,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 3392,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": null,
+              "cached_tokens": 384
+            },
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 5629
+          },
+          "latencyMs": 20168,
+          "toolCallCount": 0
+        }
+      ],
+      "generated": {
+        "tasks": 8,
+        "events": 2,
+        "gateways": 6,
+        "sequenceFlows": 18
+      },
+      "groundTruth": {
+        "tasks": 7,
+        "events": 2,
+        "gateways": 6,
+        "sequenceFlows": 17
+      },
+      "reviewWarnings": [],
+      "agentFailures": [],
+      "segmentPlan": [
+        {
+          "id": "P1",
+          "start": "S1",
+          "end": "S4",
+          "title": "发货责任确认与运输方式决策",
+          "sentenceIds": [
+            "S1",
+            "S2",
+            "S3",
+            "S4"
+          ]
+        },
+        {
+          "id": "P2",
+          "start": "S5",
+          "end": "S7",
+          "title": "包装、保险与交接准备",
+          "sentenceIds": [
+            "S5",
+            "S6",
+            "S7"
+          ]
+        }
+      ],
+      "graph": {
+        "schemaVersion": "1.0",
+        "process": {
+          "id": "process_main",
+          "name": "未命名流程"
+        },
+        "nodes": [
+          {
+            "id": "start_shipment",
+            "kind": "event",
+            "name": "发货流程开始",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": null,
+            "eventType": "start",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_clarify_shipping_responsible",
+            "kind": "task",
+            "name": "澄清发货负责人",
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "gw_shipment_amount_split",
+            "kind": "gateway",
+            "name": "发货数量判断",
+            "sourceSentences": [
+              "S2",
+              "S3",
+              "S4"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "exclusive",
+            "role": "split",
+            "pairId": null
+          },
+          {
+            "id": "task_invite_logistic_offers",
+            "kind": "task",
+            "name": "邀请三家物流公司报价",
+            "sourceSentences": [
+              "S2",
+              "S3"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_select_logistic_company",
+            "kind": "task",
+            "name": "选定一家物流公司",
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "task_normal_post_shipment",
+            "kind": "task",
+            "name": "采用普通邮政发货",
+            "sourceSentences": [
+              "S4"
+            ],
+            "introducedInSegment": "P1",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "gw_shipping_branch_merge",
+            "kind": "gateway",
+            "name": "发货方式分支汇合",
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "exclusive",
+            "role": "join",
+            "pairId": null
+          },
+          {
+            "id": "gw_packaging_parallel_split",
+            "kind": "gateway",
+            "name": "标签保险与包装并行开始",
+            "sourceSentences": [
+              "S5",
+              "S6"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "parallel",
+            "role": "split",
+            "pairId": "gw_packaging_parallel_join"
+          },
+          {
+            "id": "task_write_package_label",
+            "kind": "task",
+            "name": "书写包裹标签",
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "gw_insurance_option_split",
+            "kind": "gateway",
+            "name": "是否需要包裹保险",
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "exclusive",
+            "role": "split",
+            "pairId": "gw_insurance_option_join"
+          },
+          {
+            "id": "task_take_parcel_insurance",
+            "kind": "task",
+            "name": "办理包裹保险",
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "gw_insurance_option_join",
+            "kind": "gateway",
+            "name": "保险分支汇合",
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "exclusive",
+            "role": "join",
+            "pairId": "gw_insurance_option_split"
+          },
+          {
+            "id": "task_package_goods",
+            "kind": "task",
+            "name": "包装货物",
+            "sourceSentences": [
+              "S6"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "gw_packaging_parallel_join",
+            "kind": "gateway",
+            "name": "标签保险与包装并行汇合",
+            "sourceSentences": [
+              "S6",
+              "S7"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": "parallel",
+            "role": "join",
+            "pairId": "gw_packaging_parallel_split"
+          },
+          {
+            "id": "task_prepare_goods_for_pickup",
+            "kind": "task",
+            "name": "备妥已包装货物待物流公司取件",
+            "sourceSentences": [
+              "S7"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": "task",
+            "eventType": null,
+            "trigger": null,
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          },
+          {
+            "id": "end_shipment",
+            "kind": "event",
+            "name": "发货流程结束",
+            "sourceSentences": [
+              "S7"
+            ],
+            "introducedInSegment": "P2",
+            "taskType": null,
+            "eventType": "end",
+            "trigger": "none",
+            "eventRole": null,
+            "gatewayType": null,
+            "role": null,
+            "pairId": null
+          }
+        ],
+        "edges": [
+          {
+            "id": "flow_start_shipment_to_task_clarify_shipping_responsible",
+            "source": "start_shipment",
+            "target": "task_clarify_shipping_responsible",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S1"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "flow_task_clarify_shipping_responsible_to_gw_shipment_amount_split",
+            "source": "task_clarify_shipping_responsible",
+            "target": "gw_shipment_amount_split",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S2",
+              "S3",
+              "S4"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "edge_gw_amount_large_to_invite",
+            "source": "gw_shipment_amount_split",
+            "target": "task_invite_logistic_offers",
+            "condition": {
+              "label": "数量大",
+              "expression": null
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S2",
+              "S3"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "edge_invite_to_select",
+            "source": "task_invite_logistic_offers",
+            "target": "task_select_logistic_company",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S3"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "edge_gw_amount_small_to_post",
+            "source": "gw_shipment_amount_split",
+            "target": "task_normal_post_shipment",
+            "condition": {
+              "label": "数量小",
+              "expression": null
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S4"
+            ],
+            "introducedInSegment": "P1"
+          },
+          {
+            "id": "edge_select_to_shipping_merge",
+            "source": "task_select_logistic_company",
+            "target": "gw_shipping_branch_merge",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_post_to_shipping_merge",
+            "source": "task_normal_post_shipment",
+            "target": "gw_shipping_branch_merge",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_shipping_merge_to_parallel_split",
+            "source": "gw_shipping_branch_merge",
+            "target": "gw_packaging_parallel_split",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S5",
+              "S6"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_parallel_split_to_label",
+            "source": "gw_packaging_parallel_split",
+            "target": "task_write_package_label",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_parallel_split_to_package",
+            "source": "gw_packaging_parallel_split",
+            "target": "task_package_goods",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S6"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_label_to_insurance_split",
+            "source": "task_write_package_label",
+            "target": "gw_insurance_option_split",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_insurance_split_to_take",
+            "source": "gw_insurance_option_split",
+            "target": "task_take_parcel_insurance",
+            "condition": {
+              "label": "必要时",
+              "expression": null
+            },
+            "isDefault": false,
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_insurance_split_skip_to_join",
+            "source": "gw_insurance_option_split",
+            "target": "gw_insurance_option_join",
+            "condition": {
+              "label": "无必要",
+              "expression": null
+            },
+            "isDefault": true,
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_take_insurance_to_join",
+            "source": "task_take_parcel_insurance",
+            "target": "gw_insurance_option_join",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S5"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_insurance_join_to_parallel_join",
+            "source": "gw_insurance_option_join",
+            "target": "gw_packaging_parallel_join",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S5",
+              "S6"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_package_to_parallel_join",
+            "source": "task_package_goods",
+            "target": "gw_packaging_parallel_join",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S6"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_parallel_join_to_prepare_pickup",
+            "source": "gw_packaging_parallel_join",
+            "target": "task_prepare_goods_for_pickup",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S7"
+            ],
+            "introducedInSegment": "P2"
+          },
+          {
+            "id": "edge_prepare_pickup_to_end",
+            "source": "task_prepare_goods_for_pickup",
+            "target": "end_shipment",
+            "condition": null,
+            "isDefault": false,
+            "sourceSentences": [
+              "S7"
+            ],
+            "introducedInSegment": "P2"
+          }
+        ],
+        "metadata": {
+          "revision": 3,
+          "processedSegments": [
+            "P1",
+            "P2"
+          ],
+          "segmentationStrategy": "semantic",
+          "promptVersion": "v2"
+        }
+      }
+    }
+  ]
+}

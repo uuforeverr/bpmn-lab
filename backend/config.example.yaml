@@ -1,0 +1,46 @@
+app:
+  database_path: data/bpmn_lab.sqlite3
+  cors_origins:
+    - http://localhost:5173
+
+llm:
+  base_url: https://api.openai.com/v1
+  api_key: ${OPENAI_API_KEY}
+  model: your-model-name
+  temperature: 0
+  timeout_seconds: 120
+  max_transport_retries: 2
+  max_output_tokens: 8192
+  # Set to max_completion_tokens for compatible APIs that require it, or null to omit.
+  max_tokens_parameter: max_tokens
+  # Set false when the provider does not implement response_format=json_object.
+  json_response_format: true
+  # Set either of the next two fields to null when the provider does not support it.
+  parallel_tool_calls: true
+  tool_choice: auto
+  thinking: null
+  # Provider-specific top-level request field and values. Set parameter to null to omit it.
+  thinking_parameter: thinking
+  thinking_enabled_value:
+    type: enabled
+  thinking_disabled_value:
+    type: disabled
+  thinking_by_agent:
+    semantic_resolver: enabled
+    planner: disabled
+    generator: disabled
+    reviewer: disabled
+    repair: disabled
+  # Arbitrary OpenAI-compatible request extensions, globally or per agent.
+  extra_body: {}
+  extra_body_by_agent: {}
+
+layout:
+  enabled: true
+  base_url: http://127.0.0.1:3001
+  timeout_seconds: 15
+
+pipeline:
+  max_semantic_repairs: 3
+  fixed_length_sentences: 3
+  max_agent_retries: 2
