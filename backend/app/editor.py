@@ -30,6 +30,121 @@ def apply_edits(graph: Graph, calls: list[EditCall], segment_id: str) -> Graph:
     return candidate
 
 
+def apply_subgraph(graph: Graph, nodes: list[dict[str, Any]], edges: list[dict[str, Any]],
+                   segment_id: str) -> Graph:
+    """Atomically merge a generator-produced subgraph into the committed graph."""
+    candidate = deepcopy(graph)
+    existing_node_ids = {node.id for node in candidate.nodes}
+    existing_edge_ids = {edge.id for edge in candidate.edges}
+    new_node_ids: set[str] = set()
+    new_edge_ids: set[str] = set()
+
+    for raw in nodes:
+        args = _normalize_node_args(raw)
+        args["introducedInSegment"] = segment_id
+        node = Node.model_validate(args)
+        if node.id in existing_node_ids or node.id in new_node_ids:
+            raise EditError(f"duplicate node id: {node.id}")
+        candidate.nodes.append(node)
+        new_node_ids.add(node.id)
+
+    available_node_ids = existing_node_ids | new_node_ids
+    for raw in edges:
+        args = deepcopy(raw)
+        args["introducedInSegment"] = segment_id
+        edge = Edge.model_validate(args)
+        if edge.id in existing_edge_ids or edge.id in new_edge_ids:
+            raise EditError(f"duplicate edge id: {edge.id}")
+        if edge.source not in available_node_ids or edge.target not in available_node_ids:
+            raise EditError(f"edge {edge.id} references a missing node")
+        candidate.edges.append(edge)
+        new_edge_ids.add(edge.id)
+
+    candidate.metadata.revision += 1
+    return candidate
+
+
+def apply_graph_patch(graph: Graph, nodes: list[dict[str, Any]], edges: list[dict[str, Any]],
+                      segment_id: str, remove_node_ids: list[str] | None = None,
+                      remove_edge_ids: list[str] | None = None) -> Graph:
+    """Atomically apply a declarative generator patch, including local rewrites."""
+    candidate = deepcopy(graph)
+    remove_node_ids = list(remove_node_ids or [])
+    remove_edge_ids = list(remove_edge_ids or [])
+    if len(remove_node_ids) != len(set(remove_node_ids)):
+        raise EditError("duplicate id in removeNodeIds")
+    if len(remove_edge_ids) != len(set(remove_edge_ids)):
+        raise EditError("duplicate id in removeEdgeIds")
+
+    raw_node_ids = [item.get("id") for item in nodes if isinstance(item, dict)]
+    raw_edge_ids = [item.get("id") for item in edges if isinstance(item, dict)]
+    if len(raw_node_ids) != len(set(raw_node_ids)):
+        raise EditError("duplicate node id in patch")
+    if len(raw_edge_ids) != len(set(raw_edge_ids)):
+        raise EditError("duplicate edge id in patch")
+    remove_node_ids = [item for item in remove_node_ids if item not in set(raw_node_ids)]
+    remove_edge_ids = [item for item in remove_edge_ids if item not in set(raw_edge_ids)]
+
+    original_nodes = candidate.node_map()
+    original_edges = {edge.id: edge for edge in candidate.edges}
+    unknown_nodes = sorted(set(remove_node_ids) - set(original_nodes))
+    unknown_edges = sorted(set(remove_edge_ids) - set(original_edges))
+    if unknown_nodes:
+        raise EditError(f"removeNodeIds references missing nodes: {', '.join(unknown_nodes)}")
+    if unknown_edges:
+        raise EditError(f"removeEdgeIds references missing edges: {', '.join(unknown_edges)}")
+
+    removed_nodes = set(remove_node_ids)
+    removed_edges = set(remove_edge_ids)
+    candidate.edges = [
+        edge for edge in candidate.edges
+        if edge.id not in removed_edges
+        and edge.source not in removed_nodes
+        and edge.target not in removed_nodes
+    ]
+    candidate.nodes = [node for node in candidate.nodes if node.id not in removed_nodes]
+
+    node_positions = {node.id: index for index, node in enumerate(candidate.nodes)}
+    for raw in nodes:
+        args = _normalize_node_args(raw)
+        existing = original_nodes.get(args.get("id"))
+        if existing and existing.kind != args.get("kind"):
+            raise EditError(f"node kind is immutable for upsert: {existing.id}")
+        args["introducedInSegment"] = (
+            existing.introducedInSegment if existing else segment_id
+        )
+        node = Node.model_validate(args)
+        if node.id in node_positions:
+            candidate.nodes[node_positions[node.id]] = node
+        else:
+            node_positions[node.id] = len(candidate.nodes)
+            candidate.nodes.append(node)
+
+    available_node_ids = {node.id for node in candidate.nodes}
+    edge_positions = {edge.id: index for index, edge in enumerate(candidate.edges)}
+    for raw in edges:
+        args = deepcopy(raw)
+        existing = original_edges.get(args.get("id"))
+        args["introducedInSegment"] = (
+            existing.introducedInSegment if existing else segment_id
+        )
+        edge = Edge.model_validate(args)
+        if edge.source not in available_node_ids or edge.target not in available_node_ids:
+            raise EditError(f"edge {edge.id} references a missing node")
+        if edge.id in edge_positions:
+            candidate.edges[edge_positions[edge.id]] = edge
+        else:
+            edge_positions[edge.id] = len(candidate.edges)
+            candidate.edges.append(edge)
+
+    for edge in candidate.edges:
+        if edge.source not in available_node_ids or edge.target not in available_node_ids:
+            raise EditError(f"edge {edge.id} references a missing node")
+
+    candidate.metadata.revision += 1
+    return candidate
+
+
 def _apply(graph: Graph, call: EditCall, segment_id: str) -> None:
     args = deepcopy(call.arguments)
     nodes = graph.node_map()

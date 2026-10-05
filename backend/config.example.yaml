@@ -30,6 +30,7 @@ llm:
     planner: disabled
     generator: disabled
     reviewer: disabled
+    repair_plan: enabled
     repair: disabled
   # Arbitrary OpenAI-compatible request extensions, globally or per agent.
   extra_body: {}
@@ -41,6 +42,8 @@ layout:
   timeout_seconds: 15
 
 pipeline:
-  max_semantic_repairs: 3
+  max_semantic_repairs: 5
   fixed_length_sentences: 3
   max_agent_retries: 2
+  # Disable to run Generate + deterministic structure validation without the Review Agent.
+  reviewer_enabled: false

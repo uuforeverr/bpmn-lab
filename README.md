@@ -11,7 +11,8 @@
 - Semantic Resolver 输出会进行句子完整性、唯一 ID、顺序和原文不可篡改校验；失败时把结构化问题反馈给模型重生成。
 - 类型化节点工具 `add_task`、`add_event`、`add_gateway`，以及边编辑、局部修订工具和纯 Task/Event 串行宏 `add_linear_sequence`。
 - Graph-JSON 副本执行、确定性校验、最多三次局部 repair、提交快照。
-- 增量上下文从最早开放叶子所属片段回溯至当前片段，不单独注入 Gateway 列表。
+- Generate Agent 每轮接收截至当前片段的完整规范化描述前缀和完整已提交 Graph-JSON；片段用于限定本轮 Graph Patch 的写入范围，而不是裁剪历史语义。
+- Generate Agent 不再接收额外的开放节点或 Gateway 索引，而是从完整历史图的真实有向边判断续接、分支与汇聚关系，并在输出前自检所有 Task/Event 的入度和出度。
 - Graph-JSON 不使用 `pairId`；终局通过路径可达性检查每个 Parallel Split 是否具有所有分支共同可达的 Parallel Join。
 - 每个已提交语义片段的 BPMN XML 和前端 BPMN 图展示。
 - 独立 Node/Express BPMN 自动布局服务，为无 DI 的语义 XML 生成完整 BPMN DI。

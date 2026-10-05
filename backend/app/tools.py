@@ -1,5 +1,13 @@
 SOURCE_SENTENCES = {"type": "array", "items": {"type": "string"}}
 
+CONDITION = {"anyOf": [
+    {"type": "object", "properties": {
+        "label": {"type": "string"},
+        "expression": {"type": ["string", "null"]},
+    }, "required": ["label"], "additionalProperties": False},
+    {"type": "null"},
+]}
+
 TASK_NODE = {
     "type": "object",
     "properties": {
@@ -61,7 +69,7 @@ EDIT_TOOLS = [
     }},
     {"type": "function", "function": {
         "name": "add_gateway",
-        "description": "新增控制流 Gateway。exclusive 表示互斥选择，parallel 表示全部并行，inclusive 表示一个或多个分支；role=split 为分叉，role=join 为汇聚。Gateway 不表示业务动作。",
+        "description": "新增控制流 Gateway。exclusive 恰好选择一路；parallel 无条件启动或汇聚全部分支；inclusive 独立评估各分支条件并执行所有成立分支。role=split 为分叉，role=join 为汇聚。Gateway 不表示业务动作。",
         "parameters": {
             "type": "object",
             "properties": {
@@ -77,20 +85,14 @@ EDIT_TOOLS = [
     }},
     {"type": "function", "function": {
         "name": "add_edge",
-        "description": "新增一条有方向的 BPMN Sequence Flow。循环通过 target 指向已存在的较早节点形成回边；不要复制被重复执行的节点。条件只放在 condition 中，并行分叉的出边不得带条件。",
+        "description": "新增有方向的 BPMN Sequence Flow，表示 target 在 source 之后执行。condition 只填写决定该流是否执行的业务判定，不得填写活动或分支名称；省略 condition 表示无条件流。isDefault=true 仅表示其他条件均不成立时的后备流，且自身不得有 condition。Parallel Split 的出边不得有 condition 或 default。",
         "parameters": {
             "type": "object",
             "properties": {
                 "id": {"type": "string"},
                 "source": {"type": "string"},
                 "target": {"type": "string"},
-                "condition": {"anyOf": [
-                    {"type": "object", "properties": {
-                        "label": {"type": "string"},
-                        "expression": {"type": ["string", "null"]},
-                    }, "required": ["label"], "additionalProperties": False},
-                    {"type": "null"},
-                ]},
+                "condition": CONDITION,
                 "isDefault": {"type": "boolean"},
                 "sourceSentences": SOURCE_SENTENCES,
             },
@@ -100,16 +102,34 @@ EDIT_TOOLS = [
     }},
     {"type": "function", "function": {
         "name": "update_node",
-        "description": "仅在 Repair 阶段按 issue 修改已有节点的可变字段。不得修改 id、kind，也不得把 Task/Event/Gateway 的专属字段混用。",
+        "description": "仅在 Repair 阶段最小修改已有节点。不得修改 id、kind；只能修改与该节点 kind 匹配的字段。",
         "parameters": {"type": "object", "properties": {
-            "targetId": {"type": "string"}, "changes": {"type": "object"}, "issueId": {"type": "string"},
+            "targetId": {"type": "string"},
+            "changes": {"type": "object", "properties": {
+                "name": {"type": "string"},
+                "sourceSentences": SOURCE_SENTENCES,
+                "eventType": {"enum": ["start", "intermediate", "end"]},
+                "trigger": {"enum": ["none", "message", "timer"]},
+                "eventRole": {"anyOf": [{"enum": ["catch", "throw"]}, {"type": "null"}]},
+                "gatewayType": {"enum": ["exclusive", "parallel", "inclusive"]},
+                "role": {"enum": ["split", "join"]},
+            }, "minProperties": 1, "additionalProperties": False},
+            "issueId": {"type": "string"},
         }, "required": ["targetId", "changes"], "additionalProperties": False},
     }},
     {"type": "function", "function": {
         "name": "update_edge",
-        "description": "仅在 Repair 阶段按 issue 修改已有 Sequence Flow，不得修改 edge id。",
+        "description": "仅在 Repair 阶段最小修改已有 Sequence Flow，不得修改 edge id。使用 changes.condition=null 可移除条件并使该流无条件执行。",
         "parameters": {"type": "object", "properties": {
-            "targetId": {"type": "string"}, "changes": {"type": "object"}, "issueId": {"type": "string"},
+            "targetId": {"type": "string"},
+            "changes": {"type": "object", "properties": {
+                "source": {"type": "string"},
+                "target": {"type": "string"},
+                "condition": CONDITION,
+                "isDefault": {"type": "boolean"},
+                "sourceSentences": SOURCE_SENTENCES,
+            }, "minProperties": 1, "additionalProperties": False},
+            "issueId": {"type": "string"},
         }, "required": ["targetId", "changes"], "additionalProperties": False},
     }},
     {"type": "function", "function": {
