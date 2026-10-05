@@ -6,5 +6,7 @@ Graph Patch 只包含 nodes、edges、removeNodeIds、removeEdgeIds 四个数组
 
 返回前检查：revisionPlan 的每条关系都已落图；从 Start 沿边每个保留节点都可达；Task/Event 不直接多入或多出；Split 与 Join 的真实分支完整连接。
 
+强制按候选结果重新计算受影响节点的入度和出度：任何 Task/Event 的入度或出度都不得大于 1。多入必须重连为 `predecessors -> Join -> Task/Event`，多出必须重连为 `Task/Event -> Split -> successors`；同时多入多出必须使用 `Join -> Task/Event -> Split`。Gateway 是唯一可以承担分叉或汇聚的节点。
+
 只输出一个 JSON 对象：
 {"nodes":[],"edges":[],"removeNodeIds":[],"removeEdgeIds":[]}

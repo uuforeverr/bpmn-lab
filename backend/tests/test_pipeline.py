@@ -613,8 +613,12 @@ def test_generate_prompt_contains_type_schemas_and_both_continuation_examples():
     assert "历史 Gateway 尚未汇合" in content
     assert '"source":"gw_checks_join"' in content
     assert '"source":"task_record_approval"' in content
-    assert "gatewayRefs 是全部历史 Gateway 的无状态紧凑索引" in content
-    assert "即使已有 Gateway 当前已有两条或更多分支" in content
+    assert "截至当前的完整规范化流程描述 descriptionPrefix" in content
+    assert "完整的已提交 graph" in content
+    assert "入度 <= 1" in content
+    assert "出度 <= 1" in content
+    assert "predecessors -> Join -> Task/Event -> Split -> successors" in content
+    assert "即使该 Gateway 已有两条或更多分支" in content
     assert "只有确认当前表达不属于任何已有 Gateway 时才新建 Gateway" in content
     assert "复用已有 ID 原子替换" in content
     assert "removeNodeIds/removeEdgeIds" in content
@@ -641,6 +645,8 @@ def test_generator_patch_prompt_turns_the_accepted_plan_into_an_atomic_patch():
     assert "将其替换成 `P -> Parallel Split`" in content
     assert "不得用 `Split -> Join` 空分支" in content
     assert "每个保留节点都可达" in content
+    assert "Join -> Task/Event -> Split" in content
+    assert "Gateway 是唯一可以承担分叉或汇聚的节点" in content
     assert '"removeNodeIds"' in content
 
 
@@ -830,7 +836,7 @@ def test_semantic_resolver_retries_with_structured_validation_feedback():
     }
 
 
-def test_incremental_context_starts_at_earliest_open_node_segment():
+def test_incremental_context_always_contains_the_complete_description_prefix():
     pipeline = Pipeline(Settings())
     graph = apply_edits(Graph(), [EditCall(name="add_linear_sequence", arguments={"nodes": [
         {"id": "start", "kind": "event", "name": "Start", "eventType": "start", "sourceSentences": ["S1"]},
@@ -854,19 +860,18 @@ def test_incremental_context_starts_at_earliest_open_node_segment():
     context = pipeline._context(state, graph)
 
     assert [item["id"] for item in context["contextSegments"]] == ["P1", "P2", "P3"]
-    assert [item["id"] for item in context["sentences"]] == ["S1", "S2", "S3"]
-    assert context["openNodes"] == [{
-        "id": "open_task",
-        "name": "Open task",
-        "kind": "task",
-        "sourceSentences": ["S1"],
-        "introducedInSegment": "P1",
-    }]
-    assert context["gatewayRefs"] == []
-    assert "openGateways" not in context
+    assert context["descriptionPrefix"] == [
+        {"id": "S1", "text": "One."},
+        {"id": "S2", "text": "Two."},
+        {"id": "S3", "text": "Three."},
+    ]
+    assert context["graph"] == graph.model_dump()
+    assert "sentences" not in context
+    assert "openNodes" not in context
+    assert "gatewayRefs" not in context
 
 
-def test_gateway_refs_do_not_expand_the_continuous_text_window():
+def test_context_does_not_depend_on_frontier_or_gateway_indexes():
     pipeline = Pipeline(Settings())
     graph = apply_edits(Graph(), [
         EditCall(name="add_event", arguments={"id": "start", "name": "Start", "eventType": "start"}),
@@ -898,13 +903,11 @@ def test_gateway_refs_do_not_expand_the_continuous_text_window():
 
     context = pipeline._context(state, graph)
 
-    assert [item["id"] for item in context["contextSegments"]] == ["P3"]
-    assert [item["id"] for item in context["sentences"]] == ["S3"]
-    assert context["openNodes"] == []
-    assert context["gatewayRefs"] == [{
-        "id": "payment_result", "gatewayType": "exclusive", "role": "split",
-        "question": "Payment result",
-    }]
+    assert [item["id"] for item in context["contextSegments"]] == ["P1", "P2", "P3"]
+    assert [item["id"] for item in context["descriptionPrefix"]] == ["S1", "S2", "S3"]
+    assert context["graph"] == graph.model_dump()
+    assert "openNodes" not in context
+    assert "gatewayRefs" not in context
 
 
 def test_semantic_resolver_rejects_unknown_or_reordered_sentence_ids():

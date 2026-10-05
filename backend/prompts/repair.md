@@ -10,3 +10,4 @@
 - 使用 candidateGraph 的真实 ID，优先 update，保留无关结构和有文本证据的业务路径。
 - 一次完成全部必要编辑；新增元素当轮接好。
 - 修复连接，不要用改变 gatewayType 掩盖连接错误。
+- Task/Event 的入度和出度都不得大于 1。多入时插入语义匹配的 Join，多出时插入语义匹配的 Split；同时多入多出时使用 `Join -> Task/Event -> Split`，不得删除有文本证据的真实分支来规避度数问题。

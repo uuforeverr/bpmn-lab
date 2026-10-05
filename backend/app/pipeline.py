@@ -12,7 +12,7 @@ from .editor import EditError, apply_edits, apply_graph_patch
 from .llm import LlmClient, parse_json_object, prompt
 from .layout import BpmnLayoutClient
 from .segmentation import FixedLengthStrategy, SingleSegmentStrategy, split_sentences
-from .validation import gateway_refs, open_nodes, validate_graph, validate_incremental_batch
+from .validation import validate_graph, validate_incremental_batch
 
 
 STAGES = ["INPUT_READY", "SENTENCES_PREPARED", "SEMANTIC_RESOLVED", "SEGMENTS_CREATED",
@@ -403,30 +403,21 @@ class Pipeline:
     def _context(self, state: dict, graph: Graph) -> dict:
         current_index = state["segmentIndex"]
         segment = state["segments"][current_index]
-        normalized = {s["id"]: s["normalized"] for s in state["normalized"]["sentences"]}
-        frontier = open_nodes(graph)
-        relevant_ids = {item["id"] for item in frontier}
-        segment_index = {item["id"]: index for index, item in enumerate(state["segments"])}
-        earliest = current_index
-        for node in graph.nodes:
-            if node.id in relevant_ids and node.introducedInSegment in segment_index:
-                earliest = min(earliest, segment_index[node.introducedInSegment])
-        sentence_ids = [sid for item in state["segments"][earliest:current_index + 1] for sid in item["sentenceIds"]]
-        return {"currentSegment": segment, "contextSegments": state["segments"][earliest:current_index + 1],
+        return {"currentSegment": segment, "contextSegments": state["segments"][:current_index + 1],
                 "segmentIndex": current_index, "totalSegments": len(state["segments"]),
                 "isFirstSegment": current_index == 0, "isFinalSegment": current_index == len(state["segments"]) - 1,
-                "sentences": [{"id": sid, "text": normalized[sid]} for sid in sentence_ids],
-                "graph": graph.model_dump(), "openNodes": frontier,
-                "gatewayRefs": gateway_refs(graph)}
+                "descriptionPrefix": self._description_prefix(state),
+                "graph": graph.model_dump()}
 
     def _finalization_context(self, state: dict, graph: Graph) -> dict:
         return {
             "currentSegment": {"id": "FINALIZATION", "title": "终局闭合", "sentenceIds": []},
             "contextSegments": state["segments"],
-            "sentences": (state.get("normalized") or {}).get("sentences", []),
+            "descriptionPrefix": [
+                {"id": item["id"], "text": item.get("normalized", item.get("text", ""))}
+                for item in (state.get("normalized") or {}).get("sentences", [])
+            ],
             "graph": graph.model_dump(),
-            "openNodes": open_nodes(graph),
-            "gatewayRefs": gateway_refs(graph),
             "isFinalization": True,
         }
 
