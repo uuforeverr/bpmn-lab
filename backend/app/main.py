@@ -30,7 +30,11 @@ STAGE_ACTIVITY = {
     "SENTENCES_PREPARED": "semantic_resolver",
     "SEMANTIC_RESOLVED": "planner",
     "CONTEXT_BUILT": "generator",
+    "SUBGRAPH_GENERATED": "pipeline",
     "STRUCTURE_VALIDATED": "reviewer",
+    "SEMANTIC_REVIEWED": "pipeline",
+    "GENERATOR_RECONSIDERING": "generator",
+    "GENERATOR_DECIDED": "generator",
     "REPAIRING": "repair",
     "FINAL_VALIDATED": "bpmn_layout",
 }
@@ -51,10 +55,17 @@ def release_run(run_id: str):
 def mark_running(run: dict):
     state = run["state"]
     state.pop("executionError", None)
+    state["reviewerEnabled"] = settings.pipeline.reviewer_enabled
     if (run["status"] == "failed" and run["stage"] == "REPAIRING"
             and state.get("repairCount", 0) >= settings.pipeline.max_semantic_repairs):
         state["repairCount"] = 0
-    state["activeAgent"] = STAGE_ACTIVITY.get(run["stage"], "pipeline")
+    active_agent = STAGE_ACTIVITY.get(run["stage"], "pipeline")
+    if run["stage"] in {
+        "STRUCTURE_VALIDATED", "SEMANTIC_REVIEWED",
+        "GENERATOR_RECONSIDERING", "GENERATOR_DECIDED",
+    } and not settings.pipeline.reviewer_enabled:
+        active_agent = "pipeline"
+    state["activeAgent"] = active_agent
     store.save(run["id"], "running", run["stage"], state, {"status": "running", "activeAgent": state["activeAgent"]})
 
 
@@ -65,10 +76,11 @@ def health():
         "modelConfigured": bool(settings.llm.model and settings.llm.resolved_key()),
         "thinkingModes": {
             agent: settings.llm.thinking_for(agent)
-            for agent in ("semantic_resolver", "planner", "generator", "reviewer", "repair")
+            for agent in ("semantic_resolver", "planner", "generator", "reviewer", "repair_plan", "repair")
         },
         "layoutConfigured": settings.layout.enabled,
         "layoutAvailable": bool(pipeline.layout and pipeline.layout.health()),
+        "reviewerEnabled": settings.pipeline.reviewer_enabled,
     }
 
 

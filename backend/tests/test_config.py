@@ -1,4 +1,4 @@
-from app.config import LlmConfig
+from app.config import LlmConfig, PipelineConfig
 from app.llm import LlmClient
 
 
@@ -52,3 +52,9 @@ def test_openai_compatible_request_features_can_be_omitted_or_renamed():
         "agent_option": 1,
         "enable_thinking": True,
     }
+
+
+def test_reviewer_can_be_disabled_per_pipeline_configuration():
+    assert PipelineConfig().reviewer_enabled is False
+    assert PipelineConfig(reviewer_enabled=False).reviewer_enabled is False
+    assert PipelineConfig(reviewer_enabled=True).reviewer_enabled is True
