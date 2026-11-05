@@ -11,7 +11,7 @@ from .domain import (
     NODE_TYPE_DEFINITIONS, NODE_TYPES_BY_KIND, Edge, Graph, Issue, Node, Segment, Sentence,
     node_kind,
 )
-from .editor import EditError, apply_graph_patch
+from .editor import EditError, apply_graph_operations, apply_graph_patch
 from .llm import LlmClient, parse_json_object, prompt
 from .layout import BpmnLayoutClient
 from .process_quality import assess_soundness
@@ -68,7 +68,7 @@ class Pipeline:
     def initial_state(self, input_text: str, strategy: str) -> dict:
         graph = Graph()
         graph.metadata.segmentationStrategy = strategy
-        graph.metadata.promptVersion = "v10-add-remove-graph-delta"
+        graph.metadata.promptVersion = "v11-add-update-remove-graph-delta"
         return {"strategy": strategy, "sentences": [], "segments": [], "segmentIndex": 0,
                 "graph": graph.model_dump(), "candidate": None, "subgraph": None,
                 "issues": [], "snapshots": [],
@@ -161,7 +161,7 @@ class Pipeline:
                     state, "generator",
                     [{"role": "system", "content": self._prompt("generator")},
                      {"role": "user", "content": json.dumps(state["context"], ensure_ascii=False)}],
-                    validator=lambda value: self._validate_generated_patch(value, graph),
+                    validator=lambda value: self._validate_operation_patch(value, graph),
                 )
             except AgentRetriesExhaustedError as exc:
                 # Preserve the invalid artifact so the structural Repair mode can
@@ -182,13 +182,12 @@ class Pipeline:
         if stage == "SUBGRAPH_GENERATED":
             segment = state["segments"][state["segmentIndex"]]
             try:
-                candidate = apply_graph_patch(
+                candidate = apply_graph_operations(
                     graph,
-                    state["subgraph"]["addNodes"],
-                    state["subgraph"]["addEdges"],
+                    state["subgraph"]["add"],
+                    state["subgraph"]["update"],
+                    state["subgraph"]["remove"],
                     segment["id"],
-                    state["subgraph"]["removeNodeIds"],
-                    state["subgraph"]["removeEdgeIds"],
                 )
             except (EditError, ValidationError, KeyError, TypeError, ValueError) as exc:
                 state["candidate"] = graph.model_dump()
@@ -339,10 +338,9 @@ class Pipeline:
             segment = state["segments"][state["segmentIndex"]]
             patch = repair_result["patch"]
             candidate_before_repair = Graph.model_validate(state["candidate"])
-            candidate = apply_graph_patch(
+            candidate = apply_graph_operations(
                 candidate_before_repair,
-                patch["addNodes"], patch["addEdges"], segment["id"],
-                patch["removeNodeIds"], patch["removeEdgeIds"],
+                patch["add"], patch["update"], patch["remove"], segment["id"],
             )
             state["reviewFindings"] = []
             state["candidate"] = candidate.model_dump()
@@ -446,10 +444,9 @@ class Pipeline:
                 else state["segments"][state["segmentIndex"]]["id"]
             )
             try:
-                candidate = apply_graph_patch(
+                candidate = apply_graph_operations(
                     Graph.model_validate(state["candidate"]),
-                    patch["addNodes"], patch["addEdges"], segment_id,
-                    patch["removeNodeIds"], patch["removeEdgeIds"],
+                    patch["add"], patch["update"], patch["remove"], segment_id,
                 )
             except (EditError, ValidationError, KeyError, TypeError, ValueError) as exc:
                 if state.get("soundnessRepairing"):
@@ -1082,6 +1079,316 @@ class Pipeline:
         }
 
     @staticmethod
+    def _validate_operation_patch(value: dict, graph: Graph,
+                                  allow_empty: bool = False) -> dict:
+        """Validate the add/update/remove protocol used by all current agents.
+
+        The legacy four-array format is accepted only as a persisted-state/test
+        compatibility input and is immediately converted to the current protocol.
+        """
+        legacy_fields = {"addNodes", "addEdges", "removeNodeIds", "removeEdgeIds"}
+        if isinstance(value, dict) and set(value).issubset(legacy_fields) \
+                and ({"addNodes", "addEdges"} & set(value)):
+            legacy = Pipeline._validate_generated_patch(value, graph, allow_empty)
+            raw_add_nodes = legacy["addNodes"]
+            raw_add_edges = legacy["addEdges"]
+            raw_remove_nodes = legacy["removeNodeIds"]
+            raw_remove_edges = legacy["removeEdgeIds"]
+            removed_nodes = set(raw_remove_nodes)
+            removed_edges = set(raw_remove_edges)
+            add: list[dict] = []
+            update: list[dict] = []
+            for kind, items, removed in (
+                ("node", raw_add_nodes, removed_nodes),
+                ("edge", raw_add_edges, removed_edges),
+            ):
+                for item in items:
+                    normalized = {"kind": kind, **item}
+                    if item["id"] in removed:
+                        update.append(normalized)
+                        removed.discard(item["id"])
+                    else:
+                        add.append(normalized)
+            value = {
+                "add": add,
+                "update": update,
+                "remove": [
+                    *({"kind": "node", "id": item} for item in raw_remove_nodes
+                      if item in removed_nodes),
+                    *({"kind": "edge", "id": item} for item in raw_remove_edges
+                      if item in removed_edges),
+                ],
+            }
+
+        issues: list[dict] = []
+
+        def element_ref(item: object, location: str) -> list[dict]:
+            if isinstance(item, dict) and isinstance(item.get("id"), str):
+                return [{"id": item["id"]}]
+            return [{"location": location, "content": item}]
+
+        if not isinstance(value, dict):
+            raise AgentOutputValidationError([{
+                "code": "GRAPH_PATCH_NOT_OBJECT",
+                "message": "Graph Patch 必须是包含 add、update、remove 的对象",
+                "elements": [{"location": "patch", "content": value}],
+            }])
+        expected_fields = {"add", "update", "remove"}
+        missing_fields = sorted(expected_fields - set(value))
+        extra_fields = sorted(set(value) - expected_fields)
+        if missing_fields:
+            issues.append({
+                "code": "GRAPH_PATCH_MISSING_FIELDS",
+                "message": f"Graph Patch 缺少数组: {', '.join(missing_fields)}",
+                "elements": [{"location": field} for field in missing_fields],
+            })
+        if extra_fields:
+            issues.append({
+                "code": "GRAPH_PATCH_EXTRA_FIELDS",
+                "message": f"Graph Patch 包含未定义字段: {', '.join(extra_fields)}",
+                "elements": [
+                    {"location": field, "content": value.get(field)} for field in extra_fields
+                ],
+            })
+        operations: dict[str, list] = {}
+        for operation in ("add", "update", "remove"):
+            items = value.get(operation)
+            if not isinstance(items, list):
+                issues.append({
+                    "code": f"GRAPH_PATCH_{operation.upper()}_NOT_ARRAY",
+                    "message": f"{operation} 必须是数组",
+                    "elements": [{"location": operation, "content": items}],
+                })
+            else:
+                operations[operation] = [
+                    dict(item) if isinstance(item, dict) else item for item in items
+                ]
+        if issues:
+            raise AgentOutputValidationError(issues)
+
+        add = operations["add"]
+        update = operations["update"]
+        remove = operations["remove"]
+        for item in [*add, *update]:
+            if isinstance(item, dict):
+                item.pop("introducedInSegment", None)
+                if item.get("kind") == "node":
+                    for field in ("eventDefinition", "role"):
+                        if item.get(field) is None:
+                            item.pop(field, None)
+        if not allow_empty and not add and not update and not remove:
+            raise AgentOutputValidationError([{
+                "code": "EMPTY_GRAPH_PATCH",
+                "message": "当前片段必须至少新增、修改或删除一个元素",
+                "elements": [],
+            }])
+
+        allowed_node_fields = {
+            "task": {"kind", "id", "type", "name", "sourceSentences"},
+            "event": {"kind", "id", "type", "name", "eventDefinition", "sourceSentences"},
+            "gateway": {"kind", "id", "type", "name", "role", "sourceSentences"},
+        }
+        allowed_edge_fields = {
+            "kind", "id", "source", "target", "condition", "isDefault", "sourceSentences",
+        }
+        keys_by_operation: dict[str, list[tuple[str, str]]] = {
+            "add": [], "update": [], "remove": [],
+        }
+        for operation, items in (("add", add), ("update", update), ("remove", remove)):
+            for index, item in enumerate(items):
+                location = f"{operation}[{index}]"
+                if not isinstance(item, dict):
+                    issues.append({
+                        "code": "GRAPH_PATCH_ITEM_NOT_OBJECT",
+                        "message": f"{location} 必须是对象",
+                        "elements": element_ref(item, location),
+                    })
+                    continue
+                kind = item.get("kind")
+                element_id = item.get("id")
+                if kind not in {"node", "edge"} or not isinstance(element_id, str) \
+                        or not element_id.strip():
+                    issues.append({
+                        "code": "GRAPH_PATCH_ITEM_IDENTITY_INVALID",
+                        "message": f"{location} 必须包含 kind=node|edge 和非空字符串 id",
+                        "elements": element_ref(item, location),
+                    })
+                    continue
+                keys_by_operation[operation].append((kind, element_id))
+                if operation == "remove":
+                    extras = sorted(set(item) - {"kind", "id"})
+                    if extras:
+                        issues.append({
+                            "code": "GRAPH_PATCH_REMOVE_EXTRA_FIELDS",
+                            "message": f"{location} 只能包含 kind 和 id",
+                            "elements": element_ref(item, location),
+                        })
+                    continue
+                if kind == "node":
+                    try:
+                        node_category = node_kind(item.get("type", ""))
+                    except ValueError:
+                        allowed_types = {
+                            category: list(types) for category, types in NODE_TYPES_BY_KIND.items()
+                        }
+                        definition_text = "；".join(
+                            f"{node_type}：{definition}"
+                            for node_type, definition in NODE_TYPE_DEFINITIONS.items()
+                        )
+                        issues.append({
+                            "code": "SUBGRAPH_NODE_TYPE_INVALID",
+                            "message": (
+                                f"{location}.type={item.get('type')!r} 不是受支持的 BPMN 节点类型。"
+                                f"只能选择以下类型：{definition_text}"
+                            ),
+                            "elements": element_ref(item, location),
+                            "invalidType": item.get("type"),
+                            "allowedTypes": allowed_types,
+                            "typeDefinitions": dict(NODE_TYPE_DEFINITIONS),
+                        })
+                        continue
+                    extras = sorted(set(item) - allowed_node_fields[node_category])
+                    if extras:
+                        issues.append({
+                            "code": "SUBGRAPH_NODE_EXTRA_FIELDS",
+                            "message": f"{location} 包含不属于 {node_category} 的字段: {', '.join(extras)}",
+                            "elements": element_ref(item, location),
+                        })
+                        continue
+                    try:
+                        Node.model_validate({key: val for key, val in item.items() if key != "kind"})
+                    except ValidationError as exc:
+                        details = "; ".join(
+                            f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+                            for error in exc.errors()
+                        )
+                        issues.append({
+                            "code": "SUBGRAPH_NODE_INVALID",
+                            "message": f"{location} 无效：{details}",
+                            "elements": element_ref(item, location),
+                        })
+                else:
+                    extras = sorted(set(item) - allowed_edge_fields)
+                    if extras:
+                        issues.append({
+                            "code": "SUBGRAPH_EDGE_EXTRA_FIELDS",
+                            "message": f"{location} 包含未定义字段: {', '.join(extras)}",
+                            "elements": element_ref(item, location),
+                        })
+                        continue
+                    try:
+                        Edge.model_validate({key: val for key, val in item.items() if key != "kind"})
+                    except ValidationError as exc:
+                        details = "; ".join(
+                            f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+                            for error in exc.errors()
+                        )
+                        issues.append({
+                            "code": "SUBGRAPH_EDGE_INVALID",
+                            "message": f"{location} 无效：{details}",
+                            "elements": element_ref(item, location),
+                        })
+        if issues:
+            raise AgentOutputValidationError(issues)
+
+        for operation, keys in keys_by_operation.items():
+            duplicates = sorted({key for key in keys if keys.count(key) > 1})
+            if duplicates:
+                issues.append({
+                    "code": "GRAPH_PATCH_DUPLICATE_OPERATION_ID",
+                    "message": f"{operation} 中存在重复元素: "
+                               + ", ".join(f"{kind}:{element_id}" for kind, element_id in duplicates),
+                    "elementIds": [element_id for _, element_id in duplicates],
+                })
+        operation_sets = {name: set(keys) for name, keys in keys_by_operation.items()}
+        overlaps = sorted(
+            (operation_sets["add"] & operation_sets["update"])
+            | (operation_sets["add"] & operation_sets["remove"])
+            | (operation_sets["update"] & operation_sets["remove"])
+        )
+        if overlaps:
+            issues.append({
+                "code": "GRAPH_PATCH_OPERATION_OVERLAP",
+                "message": "同一元素不能同时出现在多个操作数组: "
+                           + ", ".join(f"{kind}:{element_id}" for kind, element_id in overlaps),
+                "elementIds": [element_id for _, element_id in overlaps],
+            })
+
+        original_nodes = graph.node_map()
+        original_edges = {edge.id: edge for edge in graph.edges}
+        for operation, must_exist in (("add", False), ("update", True), ("remove", True)):
+            wrong: list[tuple[str, str]] = []
+            for kind, element_id in operation_sets[operation]:
+                exists = element_id in (original_nodes if kind == "node" else original_edges)
+                if exists != must_exist:
+                    wrong.append((kind, element_id))
+            if wrong:
+                code = "GRAPH_PATCH_ADD_EXISTING" if operation == "add" else "GRAPH_PATCH_TARGET_MISSING"
+                expectation = "必须使用新 ID" if operation == "add" else "只能引用当前 graph 已有元素"
+                issues.append({
+                    "code": code,
+                    "message": f"{operation} {expectation}: "
+                               + ", ".join(f"{kind}:{element_id}" for kind, element_id in sorted(wrong)),
+                    "elementIds": [element_id for _, element_id in sorted(wrong)],
+                })
+        for item in update:
+            if isinstance(item, dict) and item.get("kind") == "node" \
+                    and item.get("id") in original_nodes:
+                if original_nodes[item["id"]].kind != node_kind(item["type"]):
+                    issues.append({
+                        "code": "GRAPH_PATCH_NODE_CATEGORY_IMMUTABLE",
+                        "message": f"节点 {item['id']} 更新时不能跨 Task、Event、Gateway 类别改变 type",
+                        "elementIds": [item["id"]],
+                    })
+        if issues:
+            raise AgentOutputValidationError(issues)
+
+        removed_node_ids = {
+            element_id for kind, element_id in operation_sets["remove"] if kind == "node"
+        }
+        final_node_ids = (set(original_nodes) - removed_node_ids) | {
+            element_id for kind, element_id in operation_sets["add"] if kind == "node"
+        }
+        reference_issues: list[dict] = []
+        for operation, items in (("add", add), ("update", update)):
+            for item in items:
+                if not isinstance(item, dict) or item.get("kind") != "edge":
+                    continue
+                missing_endpoints = [
+                    endpoint for endpoint in (item.get("source"), item.get("target"))
+                    if isinstance(endpoint, str) and endpoint not in final_node_ids
+                ]
+                if missing_endpoints:
+                    reference_issues.append({
+                        "code": "GRAPH_PATCH_MISSING_NODE_REFERENCE",
+                        "message": (
+                            f"{operation} 中边 {item.get('id')} 引用了最终图中不存在的节点: "
+                            + ", ".join(missing_endpoints)
+                        ),
+                        "elementIds": [item.get("id"), *missing_endpoints],
+                        "edgeId": item.get("id"),
+                        "source": item.get("source"),
+                        "target": item.get("target"),
+                        "missingEndpoints": missing_endpoints,
+                        "availableCommittedNodeIds": sorted(set(original_nodes) - removed_node_ids),
+                        "nodeIdsAddedOrReplacedByThisPatch": sorted(
+                            element_id for kind, element_id in operation_sets["add"]
+                            if kind == "node"
+                        ),
+                    })
+        if reference_issues:
+            raise AgentOutputValidationError(reference_issues)
+        try:
+            apply_graph_operations(graph, add, update, remove, "VALIDATION")
+        except (EditError, ValidationError, KeyError, TypeError, ValueError) as exc:
+            raise AgentOutputValidationError([{
+                "code": "INVALID_GRAPH_PATCH",
+                "message": f"Graph Patch 操作或最终引用无效：{exc}",
+                "elements": [],
+            }]) from None
+        return {"add": add, "update": update, "remove": remove}
+
+    @staticmethod
     def _validate_review(value: dict) -> dict:
         extra_fields = sorted(set(value) - {"findings"})
         raw_findings = value.get("findings")
@@ -1273,11 +1580,10 @@ class Pipeline:
 
     @classmethod
     def _validate_repair_patch(cls, value: dict, candidate: Graph) -> dict:
-        patch = cls._validate_generated_patch(value, candidate)
-        revised = apply_graph_patch(
+        patch = cls._validate_operation_patch(value, candidate)
+        revised = apply_graph_operations(
             candidate,
-            patch["addNodes"], patch["addEdges"], "VALIDATION",
-            patch["removeNodeIds"], patch["removeEdgeIds"],
+            patch["add"], patch["update"], patch["remove"], "VALIDATION",
         )
         if revised.nodes == candidate.nodes and revised.edges == candidate.edges:
             raise AgentOutputValidationError([{

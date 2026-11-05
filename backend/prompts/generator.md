@@ -88,7 +88,7 @@ Graph-JSON 表达：
 
 所有 Gateway 都必须包含 role：split 表示一入多出分叉，join 表示多入一出汇聚。若同一位置既需要汇合又需要分叉，使用两个 type 相同的连续 Gateway，先 join、后 split。Gateway 只表达控制流，不表示业务动作，不得包含 eventDefinition。
 
-Join 类型由入边路径的激活关系决定，而不是由入边数量决定。在同一结构化控制块内，Parallel Split 同时激活全部分支，使用 Parallel Join；Exclusive Split 只激活一个分支，使用 Exclusive Join；Inclusive Split 可激活一个或多个分支，使用 Inclusive Join。生成 Join 前，必须沿各入边反向定位最近的共同控制 Split；只有能够证明所有入边在同一流程实例中都会获得 token 时，才允许使用 Parallel Join。首次进入路径与循环回边属于不同执行轮次，必须使用 Exclusive Join 汇合。循环回边绝不能直接指向已有 Task：必须在同一个 Graph Patch 中新增 Join；把 Task 原有首次进入边放入 removeEdgeIds，并在 addEdges 中用同一 ID 重建为指向 Join；新增循环回边指向 Join，再新增一条 Join -> Task 边恢复 Task 的唯一入口。
+Join 类型由入边路径的激活关系决定，而不是由入边数量决定。在同一结构化控制块内，Parallel Split 同时激活全部分支，使用 Parallel Join；Exclusive Split 只激活一个分支，使用 Exclusive Join；Inclusive Split 可激活一个或多个分支，使用 Inclusive Join。生成 Join 前，必须沿各入边反向定位最近的共同控制 Split；只有能够证明所有入边在同一流程实例中都会获得 token 时，才允许使用 Parallel Join。首次进入路径与循环回边属于不同执行轮次，必须使用 Exclusive Join 汇合。循环回边绝不能直接指向已有 Task：新增 Join，用 update 将 Task 原有首次进入边的 target 改为该 Join，新增循环回边指向 Join，再新增一条 Join -> Task 边恢复 Task 的唯一入口。
 
 ## Sequence Flow
 
@@ -102,17 +102,14 @@ condition 必须是包含 label 的对象，不能是字符串。expression 可�
 
 ## Graph Patch
 
-Graph Patch 表示对已提交 graph 的一次原子新增/删除差量：
+Graph Patch 表示对已提交 graph 的一次原子修改，只包含三个数组：
 
-- addNodes 和 addEdges 中只出现新 ID 时表示新增元素。
-- removeNodeIds 删除不应再存在的节点；仅删除而不以同 ID 重新新增节点时，系统同时删除其关联边。
-- removeEdgeIds 删除不应再存在的边。
-- 修改已有元素时只允许显式“删除＋新增”：同一已有 ID 必须同时出现在对应 remove 列表和 add 列表中，表示保持 ID 的原子替换。
-- 同 ID 节点替换会保留未列入 removeEdgeIds 的原有关联边；需要改线时必须显式删除并新增相应边。
-- 已提交 ID 只出现在 addNodes 或 addEdges、但没有同时出现在对应 remove 列表时非法；系统不执行隐式更新。
-- 未在 Patch 中提及的历史元素保持不变。
-- 替换已有节点时不得跨 Task、Event、Gateway 类别改变 type。
-- Patch 应用后，每条 addEdges 的 source 和 target 都必须存在于最终图中。若删除节点后仍需沿用该节点，必须在同一 Patch 的 addNodes 中用同一 ID 重新新增；否则不得删除该节点或引用它。
+- `add`：新增当前 graph 中不存在的元素。每项包含 `kind`（`node` 或 `edge`）和该元素的完整定义。
+- `update`：修改当前 graph 中已有的元素。每项包含 `kind` 和修改后的完整元素定义；未写字段不会从旧元素继承。节点更新保留其未被另行修改或删除的关联边，边改线直接更新该边。
+- `remove`：删除当前 graph 中已有的元素，每项只能包含 `kind` 和 `id`。删除节点会同时删除未被 update 重连的关联边。
+- 同一 `kind + id` 只能出现在一个数组。`add` 只能使用新 ID，`update` 和 `remove` 只能引用已有 ID。
+- 未在 Patch 中提及的历史元素保持不变。节点更新不得跨 Task、Event、Gateway 类别改变 type。
+- Patch 应用后，`add` 或 `update` 中每条 Edge 的 source 和 target 都必须存在于最终图中。
 
 # Execution Rules
 
@@ -120,18 +117,18 @@ Graph Patch 表示对已提交 graph 的一次原子新增/删除差量：
 2. 建模前在内部逐句完成动作保真检查：按语义原子性确定 Task 边界，按原文锚定性命名，既不以宽泛总结性 Task 压缩多个动作，也不把同一动作机械拆分；同时确保条件、状态、结果或边界 Event 不替代业务动作。该检查过程不得出现在输出中。
 3. 沿此前已经提交的流程图中 edges 的真实方向寻找续接位置，并且只在语义上属于同一判断或同步区域时复用历史 Gateway。
 4. 只有新文本直接证明历史结构不再成立时，才修改解决当前语义所需的最小历史区域。
-5. 新增或保留的节点必须连通；删除节点、删除边或重定向连接时，必须在同一补丁中完成必要重连，并在内部确认每条新增边的两端在 Patch 应用后仍存在。
+5. 新增或保留的节点必须连通；删除节点、删除边或重定向连接时，必须在同一补丁中完成必要重连，并在内部确认每条新增或更新边的两端在 Patch 应用后仍存在。
 6. 当前业务片段不是最后一个片段时允许合法开放出口；是最后一个片段时，所有可达结束路径必须终止于 End Event。
 7. 所有新增元素必须使用唯一且稳定的英文 XML ID，并通过 sourceSentences 引用直接文本证据。
 8. 必须保留原文明示的可选、备选、并行和循环语义，不得虚构业务行为；输出必须遵守 Domain Knowledge 定义的元素语义和 Graph Patch 协议。
 
 # Output Format
 
-仅返回一个 Graph Patch JSON 对象，四个字段都必须存在且必须是数组：
+仅返回一个 Graph Patch JSON 对象，三个字段都必须存在且必须是数组：
 
-{"addNodes":[],"addEdges":[],"removeNodeIds":[],"removeEdgeIds":[]}
+{"add":[],"update":[],"remove":[]}
 
-addNodes 中的每一项必须是合法的 Task、Event 或 Gateway Node；addEdges 中的每一项必须是合法的 Sequence Flow。输出不得包含任何其他顶层字段，也不得输出内部动作检查过程。
+`add` 和 `update` 中每一项必须以 `kind` 标明 Node 或 Edge，并给出完整定义；`remove` 中每一项只能包含 `kind` 和 `id`。输出不得包含任何其他顶层字段，也不得输出内部动作检查过程。
 
 # Examples
 
@@ -143,7 +140,7 @@ addNodes 中的每一项必须是合法的 Task、Event 或 Gateway Node；addEd
 
 ### Expected Output
 
-{"addNodes":[{"id":"task_archive_application","type":"task","name":"归档申请","sourceSentences":["S4"]}],"addEdges":[{"id":"flow_result_join_archive","source":"gateway_result_join","target":"task_archive_application","sourceSentences":["S4"]}],"removeNodeIds":[],"removeEdgeIds":[]}
+{"add":[{"kind":"node","id":"task_archive_application","type":"task","name":"归档申请","sourceSentences":["S4"]},{"kind":"edge","id":"flow_result_join_archive","source":"gateway_result_join","target":"task_archive_application","sourceSentences":["S4"]}],"update":[],"remove":[]}
 
 ## Example 2：回溯历史审核并为循环增加入口 Join
 
@@ -153,5 +150,5 @@ addNodes 中的每一项必须是合法的 Task、Event 或 Gateway Node；addEd
 
 ### Expected Output
 
-{"addNodes":[{"id":"gateway_review_entry_join","type":"exclusiveGateway","name":"审核入口汇聚","role":"join","sourceSentences":["S1","S3"]},{"id":"task_revise_application","type":"task","name":"修改申请","sourceSentences":["S3"]},{"id":"task_resubmit_application","type":"task","name":"重新提交申请","sourceSentences":["S3"]}],"addEdges":[{"id":"flow_start_review","source":"start_application","target":"gateway_review_entry_join","sourceSentences":["S1"]},{"id":"flow_review_entry","source":"gateway_review_entry_join","target":"task_review_application","sourceSentences":["S1","S3"]},{"id":"flow_result_revise","source":"gateway_review_result","target":"task_revise_application","condition":{"label":"审核未通过"},"sourceSentences":["S3"]},{"id":"flow_revise_resubmit","source":"task_revise_application","target":"task_resubmit_application","sourceSentences":["S3"]},{"id":"flow_resubmit_review_entry","source":"task_resubmit_application","target":"gateway_review_entry_join","sourceSentences":["S3"]}],"removeNodeIds":[],"removeEdgeIds":["flow_start_review"]}
+{"add":[{"kind":"node","id":"gateway_review_entry_join","type":"exclusiveGateway","name":"审核入口汇聚","role":"join","sourceSentences":["S1","S3"]},{"kind":"node","id":"task_revise_application","type":"task","name":"修改申请","sourceSentences":["S3"]},{"kind":"node","id":"task_resubmit_application","type":"task","name":"重新提交申请","sourceSentences":["S3"]},{"kind":"edge","id":"flow_review_entry","source":"gateway_review_entry_join","target":"task_review_application","sourceSentences":["S1","S3"]},{"kind":"edge","id":"flow_result_revise","source":"gateway_review_result","target":"task_revise_application","condition":{"label":"审核未通过"},"sourceSentences":["S3"]},{"kind":"edge","id":"flow_revise_resubmit","source":"task_revise_application","target":"task_resubmit_application","sourceSentences":["S3"]},{"kind":"edge","id":"flow_resubmit_review_entry","source":"task_resubmit_application","target":"gateway_review_entry_join","sourceSentences":["S3"]}],"update":[{"kind":"edge","id":"flow_start_review","source":"start_application","target":"gateway_review_entry_join","sourceSentences":["S1"]}],"remove":[]}
 

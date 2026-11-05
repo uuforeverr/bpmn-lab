@@ -4,7 +4,7 @@ import pytest
 
 from app.config import Settings
 from app.domain import EditCall, Graph
-from app.editor import apply_edits, apply_graph_patch
+from app.editor import apply_edits, apply_graph_operations, apply_graph_patch
 from app.llm import LlmResult, prompt
 from app.pipeline import AgentOutputValidationError, Pipeline
 from app.segmentation import split_sentences
@@ -500,16 +500,15 @@ def test_repair_semantic_patch_leaves_graph_structure_to_the_shared_validator():
         EditCall(name="add_edge", arguments={"id": "f_start_package", "source": "start", "target": "package"}),
     ], "P1")
     patch = Pipeline._validate_repair_patch({
-        "addNodes": [],
-        "addEdges": [{
-            "id": "f_start_package", "source": "start", "target": "start",
+        "add": [],
+        "update": [{
+            "kind": "edge", "id": "f_start_package", "source": "start", "target": "start",
             "sourceSentences": ["S1"],
         }],
-        "removeNodeIds": [], "removeEdgeIds": ["f_start_package"],
+        "remove": [],
     }, candidate)
-    revised = apply_graph_patch(
-        candidate, patch["addNodes"], patch["addEdges"], "P1",
-        patch["removeNodeIds"], patch["removeEdgeIds"],
+    revised = apply_graph_operations(
+        candidate, patch["add"], patch["update"], patch["remove"], "P1",
     )
 
     assert any(issue.code == "UNREACHABLE" for issue in validate_graph(revised))
@@ -644,15 +643,14 @@ def test_generator_returns_an_atomic_subgraph_without_edit_tools():
         def complete(self, messages, tools=False, repair=False, agent=""):
             self.calls.append({"messages": messages, "tools": tools, "repair": repair, "agent": agent})
             return LlmResult(content=json.dumps({
-                "addNodes": [
-                    {"id": "start", "name": "Start", "type": "startEvent",
+                "add": [
+                    {"kind": "node", "id": "start", "name": "Start", "type": "startEvent",
                      "sourceSentences": ["S1"]},
-                    {"id": "work", "type": "task", "name": "Work", "sourceSentences": ["S1"]},
-                ],
-                "addEdges": [
-                    {"id": "flow_start_work", "source": "start", "target": "work",
+                    {"kind": "node", "id": "work", "type": "task", "name": "Work", "sourceSentences": ["S1"]},
+                    {"kind": "edge", "id": "flow_start_work", "source": "start", "target": "work",
                      "sourceSentences": ["S1"]},
                 ],
+                "update": [], "remove": [],
             }), tool_calls=[], usage={}, latency_ms=1, raw={})
 
     pipeline = Pipeline(Settings())
@@ -670,8 +668,8 @@ def test_generator_returns_an_atomic_subgraph_without_edit_tools():
     assert pipeline.llm.calls[0]["tools"] is False
     assert pipeline.llm.calls[0]["repair"] is False
     assert "edits" not in state
-    assert state["subgraph"]["removeNodeIds"] == []
-    assert state["subgraph"]["removeEdgeIds"] == []
+    assert state["subgraph"]["update"] == []
+    assert state["subgraph"]["remove"] == []
 
     stage, state = pipeline.step("SUBGRAPH_GENERATED", state, "Work.")
 
@@ -970,6 +968,112 @@ def test_generated_graph_patch_strips_optional_null_variant_fields():
     assert caught.value.issues[0]["missingEndpoints"] == ["missing"]
 
 
+def test_operation_patch_validates_atomic_add_update_and_remove():
+    graph = apply_edits(Graph(), [
+        EditCall(name="add_task", arguments={"id": "a", "name": "A"}),
+        EditCall(name="add_task", arguments={"id": "b", "name": "B"}),
+        EditCall(name="add_edge", arguments={"id": "f", "source": "a", "target": "b"}),
+    ], "P1")
+
+    patch = Pipeline._validate_operation_patch({
+        "add": [
+            {"kind": "node", "id": "c", "type": "task", "name": "C",
+             "sourceSentences": ["S2"]},
+            {"kind": "edge", "id": "f_c_b", "source": "c", "target": "b",
+             "sourceSentences": ["S2"]},
+        ],
+        "update": [{
+            "kind": "edge", "id": "f", "source": "a", "target": "c",
+            "sourceSentences": ["S2"],
+        }],
+        "remove": [],
+    }, graph)
+
+    assert [item["id"] for item in patch["add"]] == ["c", "f_c_b"]
+    assert patch["update"][0]["target"] == "c"
+    assert patch["remove"] == []
+
+
+def test_operation_patch_rejects_overlap_and_wrong_existence():
+    graph = apply_edits(Graph(), [
+        EditCall(name="add_task", arguments={"id": "a", "name": "A"}),
+    ], "P1")
+
+    with pytest.raises(AgentOutputValidationError) as caught:
+        Pipeline._validate_operation_patch({
+            "add": [{"kind": "node", "id": "a", "type": "task", "name": "A2"}],
+            "update": [],
+            "remove": [{"kind": "node", "id": "a"}],
+        }, graph)
+
+    assert {issue["code"] for issue in caught.value.issues} == {
+        "GRAPH_PATCH_OPERATION_OVERLAP", "GRAPH_PATCH_ADD_EXISTING",
+    }
+
+
+@pytest.mark.parametrize("operation,item", [
+    ("update", {"kind": "node", "id": "missing", "type": "task", "name": "Missing"}),
+    ("remove", {"kind": "edge", "id": "missing"}),
+])
+def test_operation_patch_rejects_missing_update_or_remove_target(operation, item):
+    patch = {"add": [], "update": [], "remove": []}
+    patch[operation] = [item]
+
+    with pytest.raises(AgentOutputValidationError) as caught:
+        Pipeline._validate_operation_patch(patch, Graph())
+
+    assert caught.value.issues[0]["code"] == "GRAPH_PATCH_TARGET_MISSING"
+
+
+def test_operation_patch_rejects_final_missing_node_reference_and_category_change():
+    graph = apply_edits(Graph(), [
+        EditCall(name="add_task", arguments={"id": "work", "name": "Work"}),
+    ], "P1")
+
+    with pytest.raises(AgentOutputValidationError) as caught:
+        Pipeline._validate_operation_patch({
+            "add": [{
+                "kind": "edge", "id": "bad", "source": "work", "target": "missing",
+                "sourceSentences": ["S1"],
+            }],
+            "update": [], "remove": [],
+        }, graph)
+    assert caught.value.issues[0]["code"] == "GRAPH_PATCH_MISSING_NODE_REFERENCE"
+    assert caught.value.issues[0]["missingEndpoints"] == ["missing"]
+
+    with pytest.raises(AgentOutputValidationError) as caught:
+        Pipeline._validate_operation_patch({
+            "add": [],
+            "update": [{
+                "kind": "node", "id": "work", "type": "endEvent", "name": "Done",
+                "sourceSentences": ["S1"],
+            }],
+            "remove": [],
+        }, graph)
+    assert caught.value.issues[0]["code"] == "GRAPH_PATCH_NODE_CATEGORY_IMMUTABLE"
+
+
+def test_operation_patch_converts_legacy_same_id_replacement_to_update():
+    graph = apply_edits(Graph(), [
+        EditCall(name="add_task", arguments={"id": "a", "name": "A"}),
+        EditCall(name="add_task", arguments={"id": "b", "name": "B"}),
+        EditCall(name="add_edge", arguments={"id": "f", "source": "a", "target": "b"}),
+    ], "P1")
+
+    patch = Pipeline._validate_operation_patch({
+        "addNodes": [],
+        "addEdges": [{"id": "f", "source": "b", "target": "a"}],
+        "removeNodeIds": [],
+        "removeEdgeIds": ["f"],
+    }, graph)
+
+    assert patch == {
+        "add": [],
+        "update": [{"kind": "edge", "id": "f", "source": "b", "target": "a"}],
+        "remove": [],
+    }
+
+
 def test_candidate_structure_validation_keeps_non_final_gateway_degree_non_blocking():
     pipeline = Pipeline(Settings())
     previous = apply_edits(Graph(), [EditCall(name="add_linear_sequence", arguments={"nodes": [
@@ -1134,9 +1238,9 @@ def test_generate_prompt_contains_minimal_input_graph_knowledge_and_three_exampl
     assert "currentSegment.controlFlow" not in content
     assert "必须保留原文明示的可选、备选、并行和循环语义" in content
     assert "只在语义上属于同一判断或同步区域时复用历史 Gateway" in content
-    assert '"addNodes":[],"addEdges":[]' in content
-    assert "同一已有 ID 必须同时出现在对应 remove 列表和 add 列表中" in content
-    assert "removeNodeIds" in content and "removeEdgeIds" in content
+    assert '"add":[],"update":[],"remove":[]' in content
+    assert "`update`：修改当前 graph 中已有的元素" in content
+    assert "`add`" in content and "`update`" in content and "`remove`" in content
     assert "衔接已经汇合的历史流程" in content
     assert "回溯历史审核并为循环增加入口 Join" in content
     assert "gateway_review_entry_join" in content
@@ -1159,7 +1263,7 @@ def test_repair_semantic_prompt_adjudicates_findings_and_returns_a_patch_directl
     assert "在当前整图上回溯修订审核循环" in content
     assert content.count("## Example") == 1
     assert '"decisions"' in content
-    assert '"removeNodeIds"' in content
+    assert '"remove"' in content
 
 
 def test_planner_prompt_prioritizes_business_semantics_and_keeps_obvious_control_structures_together():
@@ -1564,11 +1668,11 @@ def test_repair_patch_retry_repeats_the_original_prompt_and_data_verbatim():
         def complete(self, messages, tools=False, repair=False, agent="", **kwargs):
             self.calls.append(messages)
             content = "not json" if len(self.calls) == 1 else json.dumps({
-                "addNodes": [{
-                    "id": "task_fixed", "type": "task", "name": "Fixed",
+                "add": [{
+                    "kind": "node", "id": "task_fixed", "type": "task", "name": "Fixed",
                     "sourceSentences": ["S1"],
                 }],
-                "addEdges": [], "removeNodeIds": [], "removeEdgeIds": [],
+                "update": [], "remove": [],
             })
             return LlmResult(content=content, tool_calls=[], usage={}, latency_ms=1, raw={})
 
@@ -1582,7 +1686,7 @@ def test_repair_patch_retry_repeats_the_original_prompt_and_data_verbatim():
         validator=lambda value: pipeline._validate_repair_patch(value, Graph()),
     )
 
-    assert result["addNodes"][0]["id"] == "task_fixed"
+    assert result["add"][0]["id"] == "task_fixed"
     assert pipeline.llm.calls == [messages, messages]
 
 

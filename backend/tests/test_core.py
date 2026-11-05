@@ -2,7 +2,9 @@ import pytest
 
 from app.bpmn import graph_to_bpmn
 from app.domain import EditCall, Graph
-from app.editor import EditError, apply_edits, apply_graph_patch, apply_subgraph
+from app.editor import (
+    EditError, apply_edits, apply_graph_operations, apply_graph_patch, apply_subgraph,
+)
 from app.llm import parse_json_object
 from app.segmentation import FixedLengthStrategy, split_sentences
 from app.tools import EDIT_TOOLS
@@ -275,6 +277,82 @@ def test_graph_patch_rejects_implicit_update_without_matching_removal():
             previous,
             add_nodes=[{"id": "work", "type": "task", "name": "New work"}],
             add_edges=[],
+            segment_id="P2",
+        )
+
+
+def test_graph_operations_updates_a_node_without_rebuilding_its_edges():
+    previous = apply_edits(Graph(), [
+        EditCall(name="add_task", arguments={"id": "a", "name": "A"}),
+        EditCall(name="add_task", arguments={"id": "b", "name": "B"}),
+        EditCall(name="add_edge", arguments={"id": "f", "source": "a", "target": "b"}),
+    ], "P1")
+
+    candidate = apply_graph_operations(previous, [], [{
+        "kind": "node", "id": "b", "type": "userTask", "name": "Review B",
+        "sourceSentences": ["S2"],
+    }], [], "P2")
+
+    assert candidate.node_map()["b"].type == "userTask"
+    assert [(edge.id, edge.source, edge.target) for edge in candidate.edges] == [("f", "a", "b")]
+
+
+def test_graph_operations_rewires_an_edge_with_update():
+    previous = apply_edits(Graph(), [
+        EditCall(name="add_task", arguments={"id": "a", "name": "A"}),
+        EditCall(name="add_task", arguments={"id": "b", "name": "B"}),
+        EditCall(name="add_task", arguments={"id": "c", "name": "C"}),
+        EditCall(name="add_edge", arguments={"id": "f", "source": "a", "target": "b"}),
+    ], "P1")
+
+    candidate = apply_graph_operations(previous, [], [{
+        "kind": "edge", "id": "f", "source": "a", "target": "c",
+        "sourceSentences": ["S2"],
+    }], [], "P2")
+
+    assert [(edge.id, edge.source, edge.target) for edge in candidate.edges] == [("f", "a", "c")]
+
+
+@pytest.mark.parametrize("operation, item, message", [
+    ("add", {"kind": "node", "id": "a", "type": "task", "name": "A2"},
+     "add requires a new node id"),
+    ("update", {"kind": "node", "id": "missing", "type": "task", "name": "Missing"},
+     "update requires an existing node id"),
+    ("remove", {"kind": "edge", "id": "missing"},
+     "remove requires an existing edge id"),
+])
+def test_graph_operations_enforces_operation_existence(operation, item, message):
+    previous = apply_edits(Graph(), [
+        EditCall(name="add_task", arguments={"id": "a", "name": "A"}),
+    ], "P1")
+    operations = {"add": [], "update": [], "remove": []}
+    operations[operation] = [item]
+
+    with pytest.raises(EditError, match=message):
+        apply_graph_operations(previous, **operations, segment_id="P2")
+
+
+def test_graph_operations_rejects_overlap_and_final_missing_references():
+    previous = apply_edits(Graph(), [
+        EditCall(name="add_task", arguments={"id": "a", "name": "A"}),
+        EditCall(name="add_task", arguments={"id": "b", "name": "B"}),
+        EditCall(name="add_edge", arguments={"id": "f", "source": "a", "target": "b"}),
+    ], "P1")
+
+    with pytest.raises(EditError, match="cannot occur in multiple"):
+        apply_graph_operations(
+            previous,
+            add=[],
+            update=[{"kind": "node", "id": "b", "type": "task", "name": "B2"}],
+            remove=[{"kind": "node", "id": "b"}],
+            segment_id="P2",
+        )
+    with pytest.raises(EditError, match="references a missing node"):
+        apply_graph_operations(
+            previous,
+            add=[],
+            update=[{"kind": "edge", "id": "f", "source": "a", "target": "b"}],
+            remove=[{"kind": "node", "id": "b"}],
             segment_id="P2",
         )
 

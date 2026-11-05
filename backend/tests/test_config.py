@@ -148,7 +148,7 @@ def test_incremental_generation_prompts_define_every_allowed_node_type_and_patch
                 assert f"`{node_type}`" in content, (language, name, node_type)
             assert "intermediateEvent`" not in content, (language, name)
             assert "source" in content and "target" in content, (language, name)
-            assert "addNodes" in content and "addEdges" in content, (language, name)
+            assert "`add`" in content and "`update`" in content and "`remove`" in content, (language, name)
 
 
 def test_semantic_review_prompts_follow_the_standard_section_order():

@@ -36,14 +36,13 @@ Task 表示参与者或系统执行的独立业务动作。Event 表示业务触
 
 ## Graph Patch
 
-Graph Patch 包含四个数组：
+Graph Patch 包含三个数组：
 
-- `addNodes`：新增节点；
-- `addEdges`：新增边；
-- `removeNodeIds`：删除已有节点；
-- `removeEdgeIds`：删除已有边。
+- `add`：新增不存在的元素；
+- `update`：用完整定义修改已有元素；
+- `remove`：删除已有元素。
 
-修改已有元素时，将同一 ID 同时放入对应的 remove 数组和 add 数组。未出现在 Graph Patch 中的元素保持不变。
+每项以 `kind` 标明 `node` 或 `edge`；`remove` 项只能包含 `kind` 和 `id`。同一元素只能出现于一个数组。`add` 只能使用新 ID，`update` 和 `remove` 只能引用已有 ID。未出现在 Graph Patch 中的元素保持不变。
 
 Graph Patch 可以修改 `candidateGraph` 中任何已有元素，包括早期片段或早期修订创建的节点和边。
 
@@ -68,7 +67,7 @@ Graph Patch 可以修改 `candidateGraph` 中任何已有元素，包括早期�
 
 只返回一个 JSON 对象：
 
-{"decisions":[{"findingId":"R1","decision":"accept","reason":"基于原文和当前图真实行为的理由"}],"patch":{"addNodes":[],"addEdges":[],"removeNodeIds":[],"removeEdgeIds":[]}}
+{"decisions":[{"findingId":"R1","decision":"accept","reason":"基于原文和当前图真实行为的理由"}],"patch":{"add":[],"update":[],"remove":[]}}
 
 - `decisions` 必须恰好覆盖输入中的全部 finding。
 - `decision` 只能是 `accept` 或 `reject`。
@@ -86,5 +85,5 @@ Graph Patch 可以修改 `candidateGraph` 中任何已有元素，包括早期�
 
 ### Expected Output
 
-{"decisions":[{"findingId":"R1","decision":"accept","reason":"S3 明确要求重新提交后再次审核，而当前路径在重新提交后直接结束。"}],"patch":{"addNodes":[{"id":"gateway_review_entry_join","type":"exclusiveGateway","name":"审核入口汇聚","role":"join","sourceSentences":["S1","S3"]}],"addEdges":[{"id":"flow_start_review","source":"start_application","target":"gateway_review_entry_join","sourceSentences":["S1"]},{"id":"flow_review_entry","source":"gateway_review_entry_join","target":"task_review_application","sourceSentences":["S1","S3"]},{"id":"flow_resubmit_review_entry","source":"task_resubmit_application","target":"gateway_review_entry_join","sourceSentences":["S3"]}],"removeNodeIds":["end_rejected"],"removeEdgeIds":["flow_start_review","flow_resubmit_end"]}}
+{"decisions":[{"findingId":"R1","decision":"accept","reason":"S3 明确要求重新提交后再次审核，而当前路径在重新提交后直接结束。"}],"patch":{"add":[{"kind":"node","id":"gateway_review_entry_join","type":"exclusiveGateway","name":"审核入口汇聚","role":"join","sourceSentences":["S1","S3"]},{"kind":"edge","id":"flow_review_entry","source":"gateway_review_entry_join","target":"task_review_application","sourceSentences":["S1","S3"]},{"kind":"edge","id":"flow_resubmit_review_entry","source":"task_resubmit_application","target":"gateway_review_entry_join","sourceSentences":["S3"]}],"update":[{"kind":"edge","id":"flow_start_review","source":"start_application","target":"gateway_review_entry_join","sourceSentences":["S1"]}],"remove":[{"kind":"node","id":"end_rejected"},{"kind":"edge","id":"flow_resubmit_end"}]}}
 

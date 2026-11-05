@@ -18,7 +18,7 @@
 
 # Domain Knowledge
 
-Graph Patch 只包含四个数组：`addNodes`、`addEdges`、`removeNodeIds`、`removeEdgeIds`。修改已有元素时，将同一 ID 同时放入对应的 remove 和 add 数组。未出现的元素保持不变。
+Graph Patch 只包含三个数组：`add` 新增不存在的元素，`update` 用完整定义修改已有元素，`remove` 删除已有元素。每项以 `kind` 标明 `node` 或 `edge`；`remove` 项只能包含 `kind` 和 `id`。同一元素只能出现于一个数组，未出现的元素保持不变。
 
 节点 `type` 只能从以下 15 种具体类型中选择，其他写法均为结构错误：
 
@@ -26,7 +26,7 @@ Graph Patch 只包含四个数组：`addNodes`、`addEdges`、`removeNodeIds`、
 - `startEvent`：流程触发点，无入边；`endEvent`：路径终止结果，无出边；`intermediateCatchEvent`：等待中间事件，恰好一入一出；`intermediateThrowEvent`：发出中间事件，恰好一入一出。
 - `exclusiveGateway`：互斥选择一路或汇合互斥路径；`parallelGateway`：同时启动全部分支或等待同一并行块的全部分支；`inclusiveGateway`：启动一个或多个条件成立的分支，或等待实际激活且仍可能到达的分支。
 
-Patch 应用后，每条 `addEdges` 的 `source` 和 `target` 都必须存在于最终图中。若删除节点后仍需沿用该节点，必须在同一 Patch 的 `addNodes` 中用同一 ID 重新新增；否则不得删除该节点或引用它。
+`add` 只能使用新 ID，`update` 和 `remove` 只能引用 `candidateGraph` 中已有 ID。Patch 应用后，`add` 或 `update` 中每条 Edge 的 `source` 和 `target` 都必须存在于最终图中。节点更新保留未另行修改或删除的关联边；边改线直接更新该边。
 
 Task 和普通 Intermediate Event 只能单入单出；多入口先经过 Join Gateway，多出口先经过 Split Gateway。只有 Join Gateway 和 End Event（endEvent）可以多入口。
 
@@ -44,7 +44,7 @@ Woflan 诊断只用于定位完整流程中的 token 汇聚、结束和活性问
 1. 在 `candidateGraph.edges` 的 `source -> target` 真实路径上定位全部 issues 的共同原因。
 2. 以最小修改一次解决全部问题；不得删除原文支持的 Task、Event 或业务路径来规避校验。
 3. 新增或重连 Gateway 时必须追踪其对应 Split 并使用匹配类型。
-4. 删除节点时同时处理其关联边；新增或替换节点时在同一 Patch 中完整接入流程，并确认每条新增边的两端在 Patch 应用后仍存在。
+4. 删除节点时同时处理其关联边；新增或更新节点时在同一 Patch 中完整接入流程，并确认每条新增或更新边的两端在 Patch 应用后仍存在。
 5. 若提供 `failedGeneratedPatch`，只恢复其中有文本依据的内容，并以 `candidateGraph` 中真实存在的 ID 为准。
 6. 若提供 `soundnessDiagnostics`，修复后应形成完整、连通、可正确结束的 Workflow Net；不进行语义审查。
 7. 修复后的图仍须保留全部与本次问题无关的元素和关系。
@@ -53,7 +53,7 @@ Woflan 诊断只用于定位完整流程中的 token 汇聚、结束和活性问
 
 只返回一个 JSON 对象：
 
-{"addNodes":[],"addEdges":[],"removeNodeIds":[],"removeEdgeIds":[]}
+{"add":[],"update":[],"remove":[]}
 
 Graph Patch 必须实际修改 `candidateGraph`。不得输出完整流程图或 JSON 之外的内容。
 

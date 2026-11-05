@@ -64,7 +64,7 @@ Every Task in the final process has exactly one incoming and one outgoing Sequen
 
 Every Gateway requires `role`: `split` for one incoming and multiple outgoing branches, or `join` for multiple incoming branches and one outgoing flow. When one location must both converge and branch, use two consecutive Gateways of the same type, with the join before the split. A Gateway controls flow and never represents business work.
 
-Choose a Join type from how its incoming paths are activated, not from the number of incoming flows. Within one structured control block, a Parallel Split activates every branch and uses a Parallel Join; an Exclusive Split activates one branch and uses an Exclusive Join; an Inclusive Split activates one or more branches and uses an Inclusive Join. Before creating a Join, trace every incoming path back to the nearest common controlling Split. Use a Parallel Join only when every incoming flow is guaranteed to receive a token in the same process instance. Initial-entry and loop-return paths belong to different execution rounds and must merge through an Exclusive Join. A loop-return edge must never target an existing Task directly: add the Join; list the Task's original entry edge in `removeEdgeIds` and rebuild that same edge ID in `addEdges` with the Join as target; add the loop-return edge to the Join; then add the single Join -> Task edge.
+Choose a Join type from how its incoming paths are activated, not from the number of incoming flows. Within one structured control block, a Parallel Split activates every branch and uses a Parallel Join; an Exclusive Split activates one branch and uses an Exclusive Join; an Inclusive Split activates one or more branches and uses an Inclusive Join. Before creating a Join, trace every incoming path back to the nearest common controlling Split. Use a Parallel Join only when every incoming flow is guaranteed to receive a token in the same process instance. Initial-entry and loop-return paths belong to different execution rounds and must merge through an Exclusive Join. A loop-return edge must never target an existing Task directly: add the Join; use `update` to change the target of the Task's original entry edge to that Join; add the loop-return edge to the Join; then add the single Join -> Task edge.
 
 {"id":"gateway_id","type":"exclusiveGateway","name":"Application approved?","role":"split","sourceSentences":["S2"]}
 
@@ -76,14 +76,14 @@ An edge represents directed execution from `source` to `target`. A condition is 
 
 ## Graph Patch
 
-- A new ID in `addNodes` or `addEdges` adds an element.
-- `removeNodeIds` and `removeEdgeIds` delete obsolete elements. Removing a node without re-adding that same ID also deletes its incident edges.
-- An existing element can be changed only through explicit remove-plus-add: the same committed ID must occur in the corresponding remove list and add list, which means atomic replacement with stable identity.
-- A same-ID node replacement preserves its incident edges unless those edge IDs are explicitly removed; rewiring therefore requires explicit remove-plus-add for each changed edge.
-- A committed ID in `addNodes` or `addEdges` without the matching remove entry is invalid; implicit update is forbidden.
-- Unmentioned committed elements remain unchanged.
-- Replacing a node must not change its Task, Event, or Gateway category.
-- After applying the Patch, the `source` and `target` of every item in `addEdges` must exist in the resulting graph. If a deleted node is still required, recreate it with the same ID in `addNodes` in this Patch; otherwise do not delete or reference it.
+A Graph Patch contains exactly three arrays:
+
+- `add`: create elements whose IDs do not exist in the current graph. Each item contains `kind` (`node` or `edge`) and the complete element definition.
+- `update`: modify existing elements. Each item contains `kind` and the complete replacement definition; omitted fields are not inherited. Updating a node preserves incident edges that are not separately updated or removed. Rewire an edge by updating that edge.
+- `remove`: delete existing elements. Each item contains only `kind` and `id`. Removing a node also removes incident edges that are not redirected by `update`.
+- The same `kind + id` may occur in only one array. `add` requires a new ID; `update` and `remove` require an existing ID.
+- Omitted historical elements remain unchanged. A node update must not change its Task, Event, or Gateway category.
+- After the Patch, every Edge in `add` or `update` must reference source and target nodes that exist in the resulting graph.
 
 # Execution Rules
 
@@ -91,16 +91,16 @@ An edge represents directed execution from `source` to `target`. A condition is 
 2. Before drawing, internally perform an action-fidelity check: use semantic atomicity for Task boundaries and source anchoring for Task names, avoid both broad summary compression and mechanical over-splitting, and ensure conditions, states, outcomes, or boundary Events do not replace business work. Never output this internal check.
 3. Follow the committed graph's actual edge direction to find attachment points. Reuse a historical Gateway only when it represents the same decision or synchronization region.
 4. Modify history only when new text directly invalidates it, and then change the smallest connected region required.
-5. Every added or retained node must be connected. Complete every necessary reconnection in the same patch and internally confirm that both endpoints of every added edge still exist after the Patch is applied.
+5. Every added or retained node must be connected. Complete every necessary reconnection in the same patch and internally confirm that both endpoints of every added or updated edge still exist after the Patch is applied.
 6. Non-final segments may leave legitimate open exits. In a final segment, every reachable leaf must be an End Event.
 7. Use unique, stable English XML IDs. `sourceSentences` must cite direct textual evidence.
 8. Preserve every explicit optional, alternative, parallel, inclusive, and loop behavior without inventing business behavior, and follow the element semantics and Graph Patch protocol above.
 
 # Output Format
 
-Return only one JSON object containing exactly four arrays:
+Return only one JSON object containing exactly three arrays:
 
-{"addNodes":[],"addEdges":[],"removeNodeIds":[],"removeEdgeIds":[]}
+{"add":[],"update":[],"remove":[]}
 
 Do not output prose, Markdown, process metadata, internal action analysis, or additional top-level fields.
 
@@ -114,7 +114,7 @@ Do not output prose, Markdown, process metadata, internal action analysis, or ad
 
 ### Expected Output
 
-{"addNodes":[{"id":"task_archive_application","type":"task","name":"Archive application","sourceSentences":["S4"]}],"addEdges":[{"id":"flow_result_join_archive","source":"gateway_result_join","target":"task_archive_application","sourceSentences":["S4"]}],"removeNodeIds":[],"removeEdgeIds":[]}
+{"add":[{"kind":"node","id":"task_archive_application","type":"task","name":"Archive application","sourceSentences":["S4"]},{"kind":"edge","id":"flow_result_join_archive","source":"gateway_result_join","target":"task_archive_application","sourceSentences":["S4"]}],"update":[],"remove":[]}
 
 ## Example 2: Revisit historical review and add an entry Join for a loop
 
@@ -124,5 +124,5 @@ Do not output prose, Markdown, process metadata, internal action analysis, or ad
 
 ### Expected Output
 
-{"addNodes":[{"id":"gateway_review_entry_join","type":"exclusiveGateway","name":"Merge review entries","role":"join","sourceSentences":["S1","S3"]},{"id":"task_revise_application","type":"task","name":"Revise application","sourceSentences":["S3"]},{"id":"task_resubmit_application","type":"task","name":"Resubmit application","sourceSentences":["S3"]}],"addEdges":[{"id":"flow_start_review","source":"start_application","target":"gateway_review_entry_join","sourceSentences":["S1"]},{"id":"flow_review_entry","source":"gateway_review_entry_join","target":"task_review_application","sourceSentences":["S1","S3"]},{"id":"flow_result_revise","source":"gateway_review_result","target":"task_revise_application","condition":{"label":"Not approved"},"sourceSentences":["S3"]},{"id":"flow_revise_resubmit","source":"task_revise_application","target":"task_resubmit_application","sourceSentences":["S3"]},{"id":"flow_resubmit_review_entry","source":"task_resubmit_application","target":"gateway_review_entry_join","sourceSentences":["S3"]}],"removeNodeIds":[],"removeEdgeIds":["flow_start_review"]}
+{"add":[{"kind":"node","id":"gateway_review_entry_join","type":"exclusiveGateway","name":"Merge review entries","role":"join","sourceSentences":["S1","S3"]},{"kind":"node","id":"task_revise_application","type":"task","name":"Revise application","sourceSentences":["S3"]},{"kind":"node","id":"task_resubmit_application","type":"task","name":"Resubmit application","sourceSentences":["S3"]},{"kind":"edge","id":"flow_review_entry","source":"gateway_review_entry_join","target":"task_review_application","sourceSentences":["S1","S3"]},{"kind":"edge","id":"flow_result_revise","source":"gateway_review_result","target":"task_revise_application","condition":{"label":"Not approved"},"sourceSentences":["S3"]},{"kind":"edge","id":"flow_revise_resubmit","source":"task_revise_application","target":"task_resubmit_application","sourceSentences":["S3"]},{"kind":"edge","id":"flow_resubmit_review_entry","source":"task_resubmit_application","target":"gateway_review_entry_join","sourceSentences":["S3"]}],"update":[{"kind":"edge","id":"flow_start_review","source":"start_application","target":"gateway_review_entry_join","sourceSentences":["S1"]}],"remove":[]}
 

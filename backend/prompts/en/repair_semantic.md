@@ -36,14 +36,13 @@ Trace process behavior only along the `source -> target` direction of `candidate
 
 ## Graph Patch
 
-A Graph Patch contains four arrays:
+A Graph Patch contains three arrays:
 
-- `addNodes`: nodes to add;
-- `addEdges`: edges to add;
-- `removeNodeIds`: existing nodes to remove;
-- `removeEdgeIds`: existing edges to remove.
+- `add`: create elements that do not exist;
+- `update`: modify existing elements using complete definitions;
+- `remove`: delete existing elements.
 
-To modify an existing element, place the same ID in the corresponding remove and add arrays. Unmentioned elements remain unchanged.
+Every item identifies `kind` as `node` or `edge`; a `remove` item contains only `kind` and `id`. The same element may occur in only one array. `add` requires a new ID; `update` and `remove` require an existing ID. Unmentioned elements remain unchanged.
 
 A Graph Patch may modify any existing element in `candidateGraph`, including nodes and edges created by earlier segments or revisions.
 
@@ -70,7 +69,7 @@ Every Task must have exactly one incoming and one outgoing flow. Only Join Gatew
 
 Return only one JSON object:
 
-{"decisions":[{"findingId":"R1","decision":"accept","reason":"reason based on source text and actual current-graph behavior"}],"patch":{"addNodes":[],"addEdges":[],"removeNodeIds":[],"removeEdgeIds":[]}}
+{"decisions":[{"findingId":"R1","decision":"accept","reason":"reason based on source text and actual current-graph behavior"}],"patch":{"add":[],"update":[],"remove":[]}}
 
 - `decisions` must cover exactly all input findings.
 - `decision` must be `accept` or `reject`.
@@ -88,5 +87,5 @@ Return only one JSON object:
 
 ### Expected Output
 
-{"decisions":[{"findingId":"R1","decision":"accept","reason":"S3 explicitly requires another review after resubmission, while the current path ends immediately after resubmission."}],"patch":{"addNodes":[{"id":"gateway_review_entry_join","type":"exclusiveGateway","name":"Merge review entries","role":"join","sourceSentences":["S1","S3"]}],"addEdges":[{"id":"flow_start_review","source":"start_application","target":"gateway_review_entry_join","sourceSentences":["S1"]},{"id":"flow_review_entry","source":"gateway_review_entry_join","target":"task_review_application","sourceSentences":["S1","S3"]},{"id":"flow_resubmit_review_entry","source":"task_resubmit_application","target":"gateway_review_entry_join","sourceSentences":["S3"]}],"removeNodeIds":["end_rejected"],"removeEdgeIds":["flow_start_review","flow_resubmit_end"]}}
+{"decisions":[{"findingId":"R1","decision":"accept","reason":"S3 explicitly requires another review after resubmission, while the current path ends immediately after resubmission."}],"patch":{"add":[{"kind":"node","id":"gateway_review_entry_join","type":"exclusiveGateway","name":"Merge review entries","role":"join","sourceSentences":["S1","S3"]},{"kind":"edge","id":"flow_review_entry","source":"gateway_review_entry_join","target":"task_review_application","sourceSentences":["S1","S3"]},{"kind":"edge","id":"flow_resubmit_review_entry","source":"task_resubmit_application","target":"gateway_review_entry_join","sourceSentences":["S3"]}],"update":[{"kind":"edge","id":"flow_start_review","source":"start_application","target":"gateway_review_entry_join","sourceSentences":["S1"]}],"remove":[{"kind":"node","id":"end_rejected"},{"kind":"edge","id":"flow_resubmit_end"}]}}
 
