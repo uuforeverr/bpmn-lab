@@ -27,6 +27,14 @@ Graph-JSON 表达：
 
 本提示词只输出 Graph Patch，不输出完整流程图。
 
+## 允许的 Node Type
+
+`type` 只能从以下 15 种具体类型中选择，其他写法均为结构错误：
+
+- `task`：原文不能确定更具体执行方式的一般原子业务动作；`userTask`：人员通过软件或工作流界面完成；`serviceTask`：系统自动调用服务或应用；`sendTask`：发送外部消息；`receiveTask`：等待并接收外部消息；`businessRuleTask`：调用或评估业务规则；`manualTask`：人员在工作流系统之外手工完成；`scriptTask`：流程引擎执行脚本。
+- `startEvent`：流程触发点，无入边；`endEvent`：路径终止结果，无出边；`intermediateCatchEvent`：等待中间事件，恰好一入一出；`intermediateThrowEvent`：发出中间事件，恰好一入一出。
+- `exclusiveGateway`：互斥选择一路或汇合互斥路径；`parallelGateway`：同时启动全部分支或等待同一并行块的全部分支；`inclusiveGateway`：启动一个或多个条件成立的分支，或等待实际激活且仍可能到达的分支。
+
 ## Task
 
 控制语义：Task 遵守两项统一原则。语义原子性要求每个 Task 表示一个可独立执行或观察的业务动作，并使用具体的“动词＋业务对象”命名；具有独立业务效果的多个动作分别建模，条件、状态和结果本身不作为 Task。原文锚定性要求名称优先沿用流程描述中的动作词和业务对象，仅进行动词原形、主动语态以及删除不影响语义的主语、冠词和时间修饰语等必要规范化；不得用“处理”“管理”“执行”等宽泛词语或上位总结动作替代原文明示的具体动作。
@@ -35,7 +43,7 @@ Graph-JSON 表达：
 
 {"id":"task_id","type":"task","name":"处理申请","sourceSentences":["S1"]}
 
-type 只能是 task、userTask、serviceTask、sendTask、receiveTask、businessRuleTask、manualTask 或 scriptTask。Task 不得包含 eventDefinition 或 role。
+Task 不得包含 eventDefinition 或 role。
 
 Task 在最终流程中必须恰好有一条入边和一条出边。只有 role=join Gateway 和 endEvent 可以接收多条入边。多个路径在 Task 前汇合时，先由符合原文控制语义的 join Gateway 接收这些入边，再以一条边连接 Task；Task 后需要产生多个路径时，先以一条边连接符合原文控制语义的 split Gateway，再由该 Gateway 发出各路径。Gateway 的 exclusive、parallel 或 inclusive 类型由流程描述中的互斥、全部并行或包容选择语义决定。
 
@@ -104,6 +112,7 @@ Graph Patch 表示对已提交 graph 的一次原子新增/删除差量：
 - 已提交 ID 只出现在 addNodes 或 addEdges、但没有同时出现在对应 remove 列表时非法；系统不执行隐式更新。
 - 未在 Patch 中提及的历史元素保持不变。
 - 替换已有节点时不得跨 Task、Event、Gateway 类别改变 type。
+- Patch 应用后，每条 addEdges 的 source 和 target 都必须存在于最终图中。若删除节点后仍需沿用该节点，必须在同一 Patch 的 addNodes 中用同一 ID 重新新增；否则不得删除该节点或引用它。
 
 # Execution Rules
 
@@ -111,7 +120,7 @@ Graph Patch 表示对已提交 graph 的一次原子新增/删除差量：
 2. 建模前在内部逐句完成动作保真检查：按语义原子性确定 Task 边界，按原文锚定性命名，既不以宽泛总结性 Task 压缩多个动作，也不把同一动作机械拆分；同时确保条件、状态、结果或边界 Event 不替代业务动作。该检查过程不得出现在输出中。
 3. 沿此前已经提交的流程图中 edges 的真实方向寻找续接位置，并且只在语义上属于同一判断或同步区域时复用历史 Gateway。
 4. 只有新文本直接证明历史结构不再成立时，才修改解决当前语义所需的最小历史区域。
-5. 新增或保留的节点必须连通；删除节点、删除边或重定向连接时，必须在同一补丁中完成必要重连。
+5. 新增或保留的节点必须连通；删除节点、删除边或重定向连接时，必须在同一补丁中完成必要重连，并在内部确认每条新增边的两端在 Patch 应用后仍存在。
 6. 当前业务片段不是最后一个片段时允许合法开放出口；是最后一个片段时，所有可达结束路径必须终止于 End Event。
 7. 所有新增元素必须使用唯一且稳定的英文 XML ID，并通过 sourceSentences 引用直接文本证据。
 8. 必须保留原文明示的可选、备选、并行和循环语义，不得虚构业务行为；输出必须遵守 Domain Knowledge 定义的元素语义和 Graph Patch 协议。

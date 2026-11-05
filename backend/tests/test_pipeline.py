@@ -708,9 +708,49 @@ def test_generated_graph_patch_reports_exact_missing_reference_elements():
     issue = caught.value.issues[0]
     assert issue["code"] == "GRAPH_PATCH_MISSING_NODE_REFERENCE"
     assert issue["message"] == (
-        "边 flow_work_finish 的 target=finish_missing 引用了不存在的节点"
+        "边 flow_work_finish 的 target=finish_missing 引用了 Patch 应用后不存在的节点。"
+        "每条新增边的 source 和 target 都必须在最终图中存在；若仍需使用被删除节点，"
+        "必须在同一 Patch 的 addNodes 中用同一 ID 重建，否则不要删除该节点或改为引用真实存在的节点"
     )
     assert issue["elementIds"] == ["flow_work_finish", "finish_missing"]
+
+
+@pytest.mark.parametrize("invalid_type", ["activity", "intermediateEvent", "xorGateway"])
+def test_generated_graph_patch_invalid_node_type_reports_allowed_types_and_definitions(
+        invalid_type: str):
+    with pytest.raises(AgentOutputValidationError) as caught:
+        Pipeline._validate_generated_patch({
+            "addNodes": [{
+                "id": "invalid", "type": invalid_type, "name": "Invalid",
+                "sourceSentences": ["S1"],
+            }],
+            "addEdges": [],
+            "removeNodeIds": [],
+            "removeEdgeIds": [],
+        }, Graph())
+
+    issue = caught.value.issues[0]
+    assert issue["code"] == "SUBGRAPH_NODE_TYPE_INVALID"
+    assert issue["invalidType"] == invalid_type
+    assert issue["allowedTypes"] == {
+        "task": [
+            "task", "userTask", "serviceTask", "sendTask", "receiveTask",
+            "businessRuleTask", "manualTask", "scriptTask",
+        ],
+        "event": [
+            "startEvent", "endEvent", "intermediateCatchEvent", "intermediateThrowEvent",
+        ],
+        "gateway": ["exclusiveGateway", "parallelGateway", "inclusiveGateway"],
+    }
+    assert set(issue["typeDefinitions"]) == {
+        node_type
+        for types in issue["allowedTypes"].values()
+        for node_type in types
+    }
+    assert "intermediateEvent" not in issue["allowedTypes"]["event"]
+    for node_type, definition in issue["typeDefinitions"].items():
+        assert node_type in issue["message"]
+        assert definition in issue["message"]
 
 
 def test_json_retry_repeats_the_original_prompt_and_data_verbatim():

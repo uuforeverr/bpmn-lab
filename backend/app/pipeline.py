@@ -7,7 +7,10 @@ from pydantic import ValidationError
 
 from .bpmn import graph_to_bpmn
 from .config import Settings
-from .domain import Edge, Graph, Issue, Node, Segment, Sentence, node_kind
+from .domain import (
+    NODE_TYPE_DEFINITIONS, NODE_TYPES_BY_KIND, Edge, Graph, Issue, Node, Segment, Sentence,
+    node_kind,
+)
 from .editor import EditError, apply_graph_patch
 from .llm import LlmClient, parse_json_object, prompt
 from .layout import BpmnLayoutClient
@@ -883,10 +886,25 @@ class Pipeline:
                     try:
                         kind = node_kind(item.get("type", ""))
                     except ValueError:
+                        allowed_types = {
+                            category: list(types)
+                            for category, types in NODE_TYPES_BY_KIND.items()
+                        }
+                        definitions = dict(NODE_TYPE_DEFINITIONS)
+                        definition_text = "；".join(
+                            f"{node_type}：{definition}"
+                            for node_type, definition in definitions.items()
+                        )
                         issues.append({
                             "code": "SUBGRAPH_NODE_TYPE_INVALID",
-                            "message": f"addNodes[{index}].type 不是受支持的 BPMN 节点类型",
+                            "message": (
+                                f"addNodes[{index}].type={item.get('type')!r} 不是受支持的 BPMN "
+                                f"节点类型。只能选择以下类型：{definition_text}"
+                            ),
                             "elements": element_ref(item, f"addNodes[{index}]"),
+                            "invalidType": item.get("type"),
+                            "allowedTypes": allowed_types,
+                            "typeDefinitions": definitions,
                         })
                     else:
                         extras = sorted(set(item) - allowed_node_fields[kind])
@@ -1029,7 +1047,12 @@ class Pipeline:
                 missing_parts.append(f"target={edge.get('target')}")
             reference_issues.append({
                 "code": "GRAPH_PATCH_MISSING_NODE_REFERENCE",
-                "message": f"边 {edge.get('id')} 的 {', '.join(missing_parts)} 引用了不存在的节点",
+                "message": (
+                    f"边 {edge.get('id')} 的 {', '.join(missing_parts)} 引用了 Patch 应用后"
+                    "不存在的节点。每条新增边的 source 和 target 都必须在最终图中存在；"
+                    "若仍需使用被删除节点，必须在同一 Patch 的 addNodes 中用同一 ID 重建，"
+                    "否则不要删除该节点或改为引用真实存在的节点"
+                ),
                 "elementIds": [edge.get("id"), *missing_endpoints],
                 "edgeId": edge.get("id"),
                 "source": edge.get("source"),

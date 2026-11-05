@@ -20,6 +20,14 @@
 
 Graph Patch 只包含四个数组：`addNodes`、`addEdges`、`removeNodeIds`、`removeEdgeIds`。修改已有元素时，将同一 ID 同时放入对应的 remove 和 add 数组。未出现的元素保持不变。
 
+节点 `type` 只能从以下 15 种具体类型中选择，其他写法均为结构错误：
+
+- `task`：原文不能确定更具体执行方式的一般原子业务动作；`userTask`：人员通过软件或工作流界面完成；`serviceTask`：系统自动调用服务或应用；`sendTask`：发送外部消息；`receiveTask`：等待并接收外部消息；`businessRuleTask`：调用或评估业务规则；`manualTask`：人员在工作流系统之外手工完成；`scriptTask`：流程引擎执行脚本。
+- `startEvent`：流程触发点，无入边；`endEvent`：路径终止结果，无出边；`intermediateCatchEvent`：等待中间事件，恰好一入一出；`intermediateThrowEvent`：发出中间事件，恰好一入一出。
+- `exclusiveGateway`：互斥选择一路或汇合互斥路径；`parallelGateway`：同时启动全部分支或等待同一并行块的全部分支；`inclusiveGateway`：启动一个或多个条件成立的分支，或等待实际激活且仍可能到达的分支。
+
+Patch 应用后，每条 `addEdges` 的 `source` 和 `target` 都必须存在于最终图中。若删除节点后仍需沿用该节点，必须在同一 Patch 的 `addNodes` 中用同一 ID 重新新增；否则不得删除该节点或引用它。
+
 Task 和普通 Intermediate Event 只能单入单出；多入口先经过 Join Gateway，多出口先经过 Split Gateway。只有 Join Gateway 和 End Event（endEvent）可以多入口。
 
 Join 类型由其入边路径的激活关系决定。沿入边反向定位最近的共同 Split：
@@ -36,7 +44,7 @@ Woflan 诊断只用于定位完整流程中的 token 汇聚、结束和活性问
 1. 在 `candidateGraph.edges` 的 `source -> target` 真实路径上定位全部 issues 的共同原因。
 2. 以最小修改一次解决全部问题；不得删除原文支持的 Task、Event 或业务路径来规避校验。
 3. 新增或重连 Gateway 时必须追踪其对应 Split 并使用匹配类型。
-4. 删除节点时同时删除其关联边；新增节点时在同一 Patch 中完整接入流程。
+4. 删除节点时同时处理其关联边；新增或替换节点时在同一 Patch 中完整接入流程，并确认每条新增边的两端在 Patch 应用后仍存在。
 5. 若提供 `failedGeneratedPatch`，只恢复其中有文本依据的内容，并以 `candidateGraph` 中真实存在的 ID 为准。
 6. 若提供 `soundnessDiagnostics`，修复后应形成完整、连通、可正确结束的 Workflow Net；不进行语义审查。
 7. 修复后的图仍须保留全部与本次问题无关的元素和关系。

@@ -23,13 +23,21 @@ Nodes represent process elements and edges represent actual directed connections
 
 {"nodes":[],"edges":[]}
 
+## Allowed Node Types
+
+`type` must be exactly one of these 15 concrete values; every other spelling is structurally invalid:
+
+- `task`: a generic atomic business action when no more specific execution mode is supported by the text; `userTask`: a person works through software or a workflow UI; `serviceTask`: a system automatically invokes a service or application; `sendTask`: sends an external message; `receiveTask`: waits for and receives an external message; `businessRuleTask`: invokes or evaluates a business rule; `manualTask`: a person works outside the workflow system; `scriptTask`: the process engine executes a script.
+- `startEvent`: process trigger with no incoming flow; `endEvent`: terminal path result with no outgoing flow; `intermediateCatchEvent`: waits for an intermediate event with exactly one input and one output; `intermediateThrowEvent`: emits an intermediate event with exactly one input and one output.
+- `exclusiveGateway`: selects one branch or merges mutually exclusive paths; `parallelGateway`: starts every branch or waits for every branch of the same parallel block; `inclusiveGateway`: starts one or more satisfied branches or waits for activated branches that can still arrive.
+
 ## Task
 
 A Task follows two shared principles. Semantic atomicity requires each Task to represent one independently executable or observable business action and use a concrete verb-object name; model actions with independent business effects separately, and do not turn a condition, state, or outcome into a Task. Source anchoring requires reusing the description's action verb and business object whenever suitable, with only necessary grammatical normalization such as a base verb, active voice, or removal of a nonessential actor, article, or temporal modifier. Never replace a specific source action with a broad verb such as `handle`, `manage`, `process`, or `perform` unless the source itself uses that action.
 
 {"id":"task_id","type":"task","name":"Process application","sourceSentences":["S1"]}
 
-Task `type` must be one of `task`, `userTask`, `serviceTask`, `sendTask`, `receiveTask`, `businessRuleTask`, `manualTask`, or `scriptTask`. A Task must not contain `eventDefinition` or `role`.
+A Task must not contain `eventDefinition` or `role`.
 
 Every Task and normal-flow Intermediate Event in the final graph has exactly one incoming and one outgoing Sequence Flow. Only Join Gateways and End Events may have multiple incoming flows. Express convergence before a Task with a join Gateway and branching after a Task with a split Gateway; choose the exclusive, parallel, or inclusive type from the source semantics.
 
@@ -75,6 +83,7 @@ An edge represents directed execution from `source` to `target`. A condition is 
 - A committed ID in `addNodes` or `addEdges` without the matching remove entry is invalid; implicit update is forbidden.
 - Unmentioned committed elements remain unchanged.
 - Replacing a node must not change its Task, Event, or Gateway category.
+- After applying the Patch, the `source` and `target` of every item in `addEdges` must exist in the resulting graph. If a deleted node is still required, recreate it with the same ID in `addNodes` in this Patch; otherwise do not delete or reference it.
 
 # Execution Rules
 
@@ -82,7 +91,7 @@ An edge represents directed execution from `source` to `target`. A condition is 
 2. Before drawing, internally perform an action-fidelity check: use semantic atomicity for Task boundaries and source anchoring for Task names, avoid both broad summary compression and mechanical over-splitting, and ensure conditions, states, outcomes, or boundary Events do not replace business work. Never output this internal check.
 3. Follow the committed graph's actual edge direction to find attachment points. Reuse a historical Gateway only when it represents the same decision or synchronization region.
 4. Modify history only when new text directly invalidates it, and then change the smallest connected region required.
-5. Every added or retained node must be connected. Complete every necessary reconnection in the same patch.
+5. Every added or retained node must be connected. Complete every necessary reconnection in the same patch and internally confirm that both endpoints of every added edge still exist after the Patch is applied.
 6. Non-final segments may leave legitimate open exits. In a final segment, every reachable leaf must be an End Event.
 7. Use unique, stable English XML IDs. `sourceSentences` must cite direct textual evidence.
 8. Preserve every explicit optional, alternative, parallel, inclusive, and loop behavior without inventing business behavior, and follow the element semantics and Graph Patch protocol above.

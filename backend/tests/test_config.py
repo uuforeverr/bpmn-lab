@@ -129,6 +129,23 @@ def test_loop_return_and_single_entry_rules_are_synchronized_across_prompts():
         assert "Only Join Gateways and End Events" in prompt(name, "en"), name
 
 
+def test_incremental_generation_prompts_define_every_allowed_node_type_and_patch_references():
+    allowed_types = {
+        "task", "userTask", "serviceTask", "sendTask", "receiveTask",
+        "businessRuleTask", "manualTask", "scriptTask",
+        "startEvent", "endEvent", "intermediateCatchEvent", "intermediateThrowEvent",
+        "exclusiveGateway", "parallelGateway", "inclusiveGateway",
+    }
+    for language in {"zh", "en"}:
+        for name in {"generator", "repair_structure"}:
+            content = prompt(name, language)
+            for node_type in allowed_types:
+                assert f"`{node_type}`" in content, (language, name, node_type)
+            assert "intermediateEvent`" not in content, (language, name)
+            assert "source" in content and "target" in content, (language, name)
+            assert "addNodes" in content and "addEdges" in content, (language, name)
+
+
 def test_semantic_review_prompts_follow_the_standard_section_order():
     expected = [
         "# Role", "# Task Objective", "# Input", "# Domain Knowledge",

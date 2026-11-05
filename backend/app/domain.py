@@ -20,14 +20,36 @@ EventDefinition = Literal[
     "escalation", "terminate", "compensation",
 ]
 
-TASK_TYPES = {
-    "task", "userTask", "serviceTask", "sendTask", "receiveTask",
-    "businessRuleTask", "manualTask", "scriptTask",
+NODE_TYPES_BY_KIND: dict[str, tuple[str, ...]] = {
+    "task": (
+        "task", "userTask", "serviceTask", "sendTask", "receiveTask",
+        "businessRuleTask", "manualTask", "scriptTask",
+    ),
+    "event": (
+        "startEvent", "endEvent", "intermediateCatchEvent", "intermediateThrowEvent",
+    ),
+    "gateway": ("exclusiveGateway", "parallelGateway", "inclusiveGateway"),
 }
-EVENT_TYPES = {
-    "startEvent", "endEvent", "intermediateCatchEvent", "intermediateThrowEvent",
+TASK_TYPES = set(NODE_TYPES_BY_KIND["task"])
+EVENT_TYPES = set(NODE_TYPES_BY_KIND["event"])
+GATEWAY_TYPES = set(NODE_TYPES_BY_KIND["gateway"])
+NODE_TYPE_DEFINITIONS: dict[str, str] = {
+    "task": "未能从原文确定更具体执行方式的一般原子业务动作",
+    "userTask": "由人员通过软件或工作流界面完成的任务",
+    "serviceTask": "由系统自动调用服务或应用执行的任务",
+    "sendTask": "向外部参与者发送消息的任务",
+    "receiveTask": "等待并接收外部消息的任务",
+    "businessRuleTask": "调用或评估业务规则、决策的任务",
+    "manualTask": "由人员在工作流系统之外手工完成的任务",
+    "scriptTask": "由流程引擎执行脚本的任务",
+    "startEvent": "流程触发点，无入边",
+    "endEvent": "一条流程路径的终止结果，无出边",
+    "intermediateCatchEvent": "流程中等待事件发生的中间捕获事件，恰好一入一出",
+    "intermediateThrowEvent": "流程中发出事件的中间抛出事件，恰好一入一出",
+    "exclusiveGateway": "互斥选择一条分支，或汇合不会同时激活的互斥路径",
+    "parallelGateway": "无条件同时启动全部分支，或等待同一并行块的全部分支",
+    "inclusiveGateway": "启动一个或多个条件成立的分支，或等待实际被激活且仍可能到达的分支",
 }
-GATEWAY_TYPES = {"exclusiveGateway", "parallelGateway", "inclusiveGateway"}
 EVENT_DEFINITIONS: dict[str, set[str]] = {
     "startEvent": {"message", "timer", "signal", "conditional"},
     "endEvent": {"message", "signal", "error", "escalation", "terminate", "compensation"},
