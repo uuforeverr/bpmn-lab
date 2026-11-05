@@ -3,38 +3,24 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 
+import pysbd
+
 from .domain import Segment, Sentence
 
 
-_PROTECTED_PERIOD_PATTERNS = (
-    r"(?i)\b(?:e\.g\.|i\.e\.|a\.m\.|p\.m\.|ph\.d\.|mr\.|mrs\.|ms\.|dr\.|prof\.|sr\.|jr\.|vs\.|cf\.)",
-    r"\b(?:[A-Za-z]\.){2,}",
-    r"\b[A-Z]\.(?=\s+[A-Z][a-z])",
-    r"(?<!\w)\d+(?:\.\d+)+(?!\w)",
-    r"(?i)\b(?:no|fig|eq|sec|ch|vol|pp?|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\.(?=\s*\d)",
-)
+_ENGLISH_SENTENCE_SEGMENTER = pysbd.Segmenter(language="en", clean=False)
 
 
 def split_sentences(text: str) -> list[Sentence]:
     text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
     text = re.sub(r"\s*\n+\s*", " ", text)
     text = re.sub(r"[ \t]+", " ", text)
-    protected: dict[str, str] = {}
-
-    def protect(match: re.Match[str]) -> str:
-        token = f"__ABBR_{len(protected)}__"
-        protected[token] = match.group(0)
-        return token
-
-    for pattern in _PROTECTED_PERIOD_PATTERNS:
-        text = re.sub(pattern, protect, text)
-    parts = re.split(r"(?<=[。！？])\s*|(?<=[.!?])(?:\s+|$)", text)
     cleaned = []
-    for part in parts:
-        for token, value in protected.items():
-            part = part.replace(token, value)
-        if part.strip():
-            cleaned.append(part.strip())
+    for english_part in _ENGLISH_SENTENCE_SEGMENTER.segment(text):
+        for part in re.split(r"(?<=[。！？])\s*", english_part):
+            part = re.sub(r"[ \t]+", " ", part).strip()
+            if part:
+                cleaned.append(part)
     return [Sentence(id=f"S{i}", text=value) for i, value in enumerate(cleaned, 1)]
 
 

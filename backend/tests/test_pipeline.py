@@ -1774,12 +1774,13 @@ def test_sentence_split_supports_chinese_and_english_question_and_exclamation_ma
 
 def test_sentence_split_protects_common_abbreviations_initialisms_and_numbers():
     sentences = split_sentences(
-        "Dr. Smith uses e.g. BPMN 2.0 in the U.S. office. "
-        "See Fig. 3 and contact A. Brown. Continue."
+        "Dr. Smith at Acme Inc. uses e.g. BPMN 2.0 in the U.S. office. "
+        "Tools etc. are prepared. See Fig. 3 and contact A. Brown. Continue."
     )
 
     assert [item.text for item in sentences] == [
-        "Dr. Smith uses e.g. BPMN 2.0 in the U.S. office.",
+        "Dr. Smith at Acme Inc. uses e.g. BPMN 2.0 in the U.S. office.",
+        "Tools etc. are prepared.",
         "See Fig. 3 and contact A. Brown.",
         "Continue.",
     ]
