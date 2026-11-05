@@ -4,13 +4,16 @@ app:
     - http://localhost:5173
 
 llm:
-  base_url: https://api.openai.com/v1
+  base_url: https://api.deepseek.com
   api_key: ${OPENAI_API_KEY}
-  model: your-model-name
+  model: dsv4-flash
   temperature: 0
   timeout_seconds: 120
   max_transport_retries: 2
   max_output_tokens: 8192
+  # Optional larger/smaller output budgets for individual agents.
+  max_output_tokens_by_agent:
+    repair_plan: 16384
   # Set to max_completion_tokens for compatible APIs that require it, or null to omit.
   max_tokens_parameter: max_tokens
   # Set false when the provider does not implement response_format=json_object.
@@ -26,15 +29,26 @@ llm:
   thinking_disabled_value:
     type: disabled
   thinking_by_agent:
-    semantic_resolver: enabled
     planner: disabled
     generator: disabled
     reviewer: disabled
+    # Invalid/empty JSON automatically retries once with thinking disabled.
     repair_plan: enabled
     repair: disabled
   # Arbitrary OpenAI-compatible request extensions, globally or per agent.
   extra_body: {}
   extra_body_by_agent: {}
+
+# Optional stronger model for unresolved Generate/Review disputes.
+# When omitted, Arbitration Agent falls back to the main llm configuration.
+arbitrator_llm:
+  base_url: https://api.deepseek.com
+  api_key: ${OPENAI_API_KEY}
+  model: dsv4-pro
+  temperature: 0
+  timeout_seconds: 120
+  max_output_tokens: 8192
+  thinking: enabled
 
 layout:
   enabled: true
@@ -43,7 +57,15 @@ layout:
 
 pipeline:
   max_semantic_repairs: 5
+  # Final Woflan-guided repair rounds. Zero records soundness but skips repair.
+  max_soundness_repairs: 5
   fixed_length_sentences: 3
   max_agent_retries: 2
   # Disable to run Generate + deterministic structure validation without the Review Agent.
   reviewer_enabled: false
+  # One round is one Reviewer finding/counterargument plus one Generator decision.
+  max_review_discussion_rounds: 3
+
+# Switch all agent prompts together: zh or en.
+prompts:
+  language: zh

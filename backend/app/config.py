@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 ThinkingMode = Literal["enabled", "disabled"]
+PromptLanguage = Literal["zh", "en"]
 
 
 class AppConfig(BaseModel):
@@ -25,6 +26,7 @@ class LlmConfig(BaseModel):
     timeout_seconds: float = 120
     max_transport_retries: int = 2
     max_output_tokens: int = 8192
+    max_output_tokens_by_agent: dict[str, int] = Field(default_factory=dict)
     max_tokens_parameter: Literal["max_tokens", "max_completion_tokens"] | None = "max_tokens"
     json_response_format: bool = True
     parallel_tool_calls: bool | None = True
@@ -44,6 +46,12 @@ class LlmConfig(BaseModel):
     def thinking_for(self, agent: str) -> ThinkingMode | None:
         return self.thinking_by_agent.get(agent, self.thinking)
 
+    def max_output_tokens_for(self, agent: str) -> int:
+        value = self.max_output_tokens_by_agent.get(agent, self.max_output_tokens)
+        if value < 1:
+            raise ValueError(f"max output tokens for {agent or 'default'} must be positive")
+        return value
+
     def thinking_value(self, mode: ThinkingMode) -> Any:
         return self.thinking_enabled_value if mode == "enabled" else self.thinking_disabled_value
 
@@ -56,16 +64,24 @@ class LayoutConfig(BaseModel):
 
 class PipelineConfig(BaseModel):
     max_semantic_repairs: int = 5
+    max_soundness_repairs: int = Field(default=5, ge=0)
     fixed_length_sentences: int = 3
     max_agent_retries: int = 2
     reviewer_enabled: bool = False
+    max_review_discussion_rounds: int = Field(default=3, ge=1)
+
+
+class PromptConfig(BaseModel):
+    language: PromptLanguage = "zh"
 
 
 class Settings(BaseModel):
     app: AppConfig = Field(default_factory=AppConfig)
     llm: LlmConfig = Field(default_factory=LlmConfig)
+    arbitrator_llm: LlmConfig | None = None
     layout: LayoutConfig = Field(default_factory=LayoutConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
+    prompts: PromptConfig = Field(default_factory=PromptConfig)
 
 
 def load_settings(path: str | None = None) -> Settings:
@@ -74,5 +90,7 @@ def load_settings(path: str | None = None) -> Settings:
     if not target.exists():
         example = Path("config.example.yaml")
         target = example if example.exists() else target
+    if target.parent != Path("."):
+        load_dotenv(target.parent / ".env", override=False)
     data: dict[str, Any] = yaml.safe_load(target.read_text("utf-8")) if target.exists() else {}
     return Settings.model_validate(data or {})

@@ -22,6 +22,7 @@ class LlmResult:
     raw: dict
     finish_reason: str | None = None
     thinking_mode: str | None = None
+    model: str | None = None
 
 
 class LlmClient:
@@ -31,9 +32,9 @@ class LlmClient:
                              timeout=config.timeout_seconds, max_retries=config.max_transport_retries)
 
     def complete(self, messages: list[dict], tools: bool = False, repair: bool = False,
-                 agent: str = "") -> LlmResult:
+                 agent: str = "", thinking_override: str | None = None) -> LlmResult:
         started = time.perf_counter()
-        thinking_mode = self.config.thinking_for(agent)
+        thinking_mode = thinking_override or self.config.thinking_for(agent)
         allowed = EDIT_TOOLS if repair else [tool for tool in EDIT_TOOLS if tool["function"]["name"] in {
             "add_task", "add_event", "add_gateway", "add_edge", "add_linear_sequence",
         }]
@@ -52,7 +53,7 @@ class LlmClient:
         calls = [EditCall(name=item.function.name, arguments=json.loads(item.function.arguments)) for item in (message.tool_calls or [])]
         return LlmResult(message.content, calls, response.usage.model_dump() if response.usage else {},
                          int((time.perf_counter() - started) * 1000), response.model_dump(),
-                         choice.finish_reason, thinking_mode)
+                         choice.finish_reason, thinking_mode, response.model or self.config.model)
 
     def _request_kwargs(self, messages: list[dict], agent: str,
                         thinking_mode: str | None) -> dict:
@@ -61,7 +62,7 @@ class LlmClient:
         if self.config.temperature is not None:
             kwargs["temperature"] = self.config.temperature
         if self.config.max_tokens_parameter is not None:
-            kwargs[self.config.max_tokens_parameter] = self.config.max_output_tokens
+            kwargs[self.config.max_tokens_parameter] = self.config.max_output_tokens_for(agent)
 
         extra_body = deepcopy(self.config.extra_body)
         extra_body.update(deepcopy(self.config.extra_body_by_agent.get(agent, {})))
@@ -101,5 +102,9 @@ def parse_json_object(content: str | None, agent: str) -> dict:
     return value
 
 
-def prompt(name: str) -> str:
-    return (Path(__file__).parents[1] / "prompts" / f"{name}.md").read_text("utf-8")
+def prompt(name: str, language: str = "zh") -> str:
+    root = Path(__file__).parents[1] / "prompts"
+    path = root / f"{name}.md" if language == "zh" else root / language / f"{name}.md"
+    if not path.exists():
+        raise FileNotFoundError(f"prompt not found: language={language}, name={name}, path={path}")
+    return path.read_text("utf-8")

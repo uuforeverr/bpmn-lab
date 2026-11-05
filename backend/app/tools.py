@@ -1,4 +1,16 @@
 SOURCE_SENTENCES = {"type": "array", "items": {"type": "string"}}
+TASK_TYPES = [
+    "task", "userTask", "serviceTask", "sendTask", "receiveTask",
+    "businessRuleTask", "manualTask", "scriptTask",
+]
+EVENT_TYPES = [
+    "startEvent", "endEvent", "intermediateCatchEvent", "intermediateThrowEvent",
+]
+GATEWAY_TYPES = ["exclusiveGateway", "parallelGateway", "inclusiveGateway"]
+EVENT_DEFINITIONS = [
+    "message", "timer", "signal", "conditional", "link", "error",
+    "escalation", "terminate", "compensation",
+]
 
 CONDITION = {"anyOf": [
     {"type": "object", "properties": {
@@ -12,11 +24,11 @@ TASK_NODE = {
     "type": "object",
     "properties": {
         "id": {"type": "string", "description": "稳定且唯一的英文 XML ID。"},
-        "kind": {"const": "task"},
+        "type": {"enum": TASK_TYPES},
         "name": {"type": "string", "description": "动词加业务对象形式的任务名称。"},
         "sourceSentences": SOURCE_SENTENCES,
     },
-    "required": ["id", "kind", "name", "sourceSentences"],
+    "required": ["id", "type", "name", "sourceSentences"],
     "additionalProperties": False,
 }
 
@@ -24,25 +36,24 @@ EVENT_NODE = {
     "type": "object",
     "properties": {
         "id": {"type": "string", "description": "稳定且唯一的英文 XML ID。"},
-        "kind": {"const": "event"},
+        "type": {"enum": EVENT_TYPES},
         "name": {"type": "string"},
-        "eventType": {"enum": ["start", "intermediate", "end"]},
-        "trigger": {"enum": ["none", "message", "timer"]},
-        "eventRole": {"enum": ["catch", "throw"]},
+        "eventDefinition": {"enum": EVENT_DEFINITIONS},
         "sourceSentences": SOURCE_SENTENCES,
     },
-    "required": ["id", "kind", "name", "eventType", "trigger", "sourceSentences"],
+    "required": ["id", "type", "name", "sourceSentences"],
     "additionalProperties": False,
 }
 
 EDIT_TOOLS = [
     {"type": "function", "function": {
         "name": "add_task",
-        "description": "新增一个表示明确业务动作的 Task。只能填写任务字段，不能携带 eventType、trigger、gatewayType 或 role。",
+        "description": "新增一个表示单一明确业务动作的 Task。type 省略时为普通 task。",
         "parameters": {
             "type": "object",
             "properties": {
                 "id": {"type": "string", "description": "稳定且唯一的英文 XML ID。"},
+                "type": {"enum": TASK_TYPES},
                 "name": {"type": "string", "description": "简洁的动词加业务对象名称。"},
                 "sourceSentences": SOURCE_SENTENCES,
             },
@@ -52,34 +63,33 @@ EDIT_TOOLS = [
     }},
     {"type": "function", "function": {
         "name": "add_event",
-        "description": "新增 Start、Intermediate 或 End Event。Event 只表达流程状态或触发，不得用来替代文本明确描述的业务动作。",
+        "description": "新增 Event。普通事件省略 eventDefinition；Event 只表达触发、等待、发生或结束结果，不得替代明确业务动作。",
         "parameters": {
             "type": "object",
             "properties": {
                 "id": {"type": "string", "description": "稳定且唯一的英文 XML ID。"},
                 "name": {"type": "string"},
-                "eventType": {"enum": ["start", "intermediate", "end"]},
-                "trigger": {"enum": ["none", "message", "timer"]},
-                "eventRole": {"enum": ["catch", "throw"], "description": "仅 intermediate event 可用；省略时按 catch 处理。"},
+                "type": {"enum": EVENT_TYPES},
+                "eventDefinition": {"enum": EVENT_DEFINITIONS},
                 "sourceSentences": SOURCE_SENTENCES,
             },
-            "required": ["id", "name", "eventType", "trigger", "sourceSentences"],
+            "required": ["id", "name", "type", "sourceSentences"],
             "additionalProperties": False,
         },
     }},
     {"type": "function", "function": {
         "name": "add_gateway",
-        "description": "新增控制流 Gateway。exclusive 恰好选择一路；parallel 无条件启动或汇聚全部分支；inclusive 独立评估各分支条件并执行所有成立分支。role=split 为分叉，role=join 为汇聚。Gateway 不表示业务动作。",
+        "description": "新增控制流 Gateway。exclusiveGateway 恰好选择一路或汇聚互斥路径；parallelGateway 无条件启动或汇聚全部分支；inclusiveGateway 执行所有条件成立分支或等待实际启动分支。role=split 为一入多出分叉，role=join 为多入一出汇聚；同一位置既汇聚又分叉时使用同类型的 join Gateway 后接 split Gateway。",
         "parameters": {
             "type": "object",
             "properties": {
                 "id": {"type": "string", "description": "稳定且唯一的英文 XML ID。"},
                 "name": {"type": "string"},
-                "gatewayType": {"enum": ["exclusive", "parallel", "inclusive"]},
+                "type": {"enum": GATEWAY_TYPES},
                 "role": {"enum": ["split", "join"]},
                 "sourceSentences": SOURCE_SENTENCES,
             },
-            "required": ["id", "name", "gatewayType", "role", "sourceSentences"],
+            "required": ["id", "name", "type", "role", "sourceSentences"],
             "additionalProperties": False,
         },
     }},
@@ -102,16 +112,14 @@ EDIT_TOOLS = [
     }},
     {"type": "function", "function": {
         "name": "update_node",
-        "description": "仅在 Repair 阶段最小修改已有节点。不得修改 id、kind；只能修改与该节点 kind 匹配的字段。",
+        "description": "仅在 Repair 阶段最小修改已有节点。不得修改 id；type 只能在同一节点类别内改变。",
         "parameters": {"type": "object", "properties": {
             "targetId": {"type": "string"},
             "changes": {"type": "object", "properties": {
                 "name": {"type": "string"},
                 "sourceSentences": SOURCE_SENTENCES,
-                "eventType": {"enum": ["start", "intermediate", "end"]},
-                "trigger": {"enum": ["none", "message", "timer"]},
-                "eventRole": {"anyOf": [{"enum": ["catch", "throw"]}, {"type": "null"}]},
-                "gatewayType": {"enum": ["exclusive", "parallel", "inclusive"]},
+                "type": {"enum": TASK_TYPES + EVENT_TYPES + GATEWAY_TYPES},
+                "eventDefinition": {"anyOf": [{"enum": EVENT_DEFINITIONS}, {"type": "null"}]},
                 "role": {"enum": ["split", "join"]},
             }, "minProperties": 1, "additionalProperties": False},
             "issueId": {"type": "string"},

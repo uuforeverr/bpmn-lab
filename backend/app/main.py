@@ -27,14 +27,14 @@ class CreateRun(BaseModel):
 
 STAGE_ACTIVITY = {
     "INPUT_READY": "sentence_splitter",
-    "SENTENCES_PREPARED": "semantic_resolver",
-    "SEMANTIC_RESOLVED": "planner",
+    "SENTENCES_PREPARED": "planner",
     "CONTEXT_BUILT": "generator",
     "SUBGRAPH_GENERATED": "pipeline",
     "STRUCTURE_VALIDATED": "reviewer",
     "SEMANTIC_REVIEWED": "pipeline",
     "GENERATOR_RECONSIDERING": "generator",
     "GENERATOR_DECIDED": "generator",
+    "ARBITRATING": "arbitrator",
     "REPAIRING": "repair",
     "FINAL_VALIDATED": "bpmn_layout",
 }
@@ -56,13 +56,10 @@ def mark_running(run: dict):
     state = run["state"]
     state.pop("executionError", None)
     state["reviewerEnabled"] = settings.pipeline.reviewer_enabled
-    if (run["status"] == "failed" and run["stage"] == "REPAIRING"
-            and state.get("repairCount", 0) >= settings.pipeline.max_semantic_repairs):
-        state["repairCount"] = 0
     active_agent = STAGE_ACTIVITY.get(run["stage"], "pipeline")
     if run["stage"] in {
         "STRUCTURE_VALIDATED", "SEMANTIC_REVIEWED",
-        "GENERATOR_RECONSIDERING", "GENERATOR_DECIDED",
+        "GENERATOR_RECONSIDERING", "GENERATOR_DECIDED", "ARBITRATING",
     } and not settings.pipeline.reviewer_enabled:
         active_agent = "pipeline"
     state["activeAgent"] = active_agent
@@ -76,8 +73,13 @@ def health():
         "modelConfigured": bool(settings.llm.model and settings.llm.resolved_key()),
         "thinkingModes": {
             agent: settings.llm.thinking_for(agent)
-            for agent in ("semantic_resolver", "planner", "generator", "reviewer", "repair_plan", "repair")
+            for agent in ("planner", "generator", "reviewer", "repair_plan", "repair")
         },
+        "arbitratorModelConfigured": bool(
+            settings.arbitrator_llm
+            and settings.arbitrator_llm.model
+            and settings.arbitrator_llm.resolved_key()
+        ),
         "layoutConfigured": settings.layout.enabled,
         "layoutAvailable": bool(pipeline.layout and pipeline.layout.health()),
         "reviewerEnabled": settings.pipeline.reviewer_enabled,

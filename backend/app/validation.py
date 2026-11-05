@@ -54,12 +54,54 @@ def validate_graph(graph: Graph, final: bool = False) -> list[Issue]:
                 message=f"问题：Start {node.id} 有入边。原因：Start 是流程入口，不能有入边。",
                 elementIds=[node.id],
             ))
+        start_edges = [edge for edge in graph.edges if edge.source == node.id]
+        invalid_start_edges = [
+            edge.id for edge in start_edges if edge.condition is not None or edge.isDefault
+        ]
+        if invalid_start_edges:
+            issues.append(Issue(
+                code="START_OUTGOING_CONDITION",
+                message=(f"问题：Start {node.id} 的出边包含 condition 或 default。"
+                         "原因：Start 的多条出边会并行启动，不能表达条件选择。"),
+                elementIds=invalid_start_edges,
+                sourceSentences=node.sourceSentences,
+            ))
     for node in ends:
         if outgoing[node.id]:
             issues.append(Issue(
                 code="END_HAS_OUTGOING",
                 message=f"问题：End {node.id} 有出边。原因：End 是流程终点，不能有出边。",
                 elementIds=[node.id],
+            ))
+    for node in graph.nodes:
+        if node.kind != "event" or node.eventType != "intermediate":
+            continue
+        incoming_count = len(incoming[node.id])
+        outgoing_count = len(outgoing[node.id])
+        if incoming_count > 1:
+            issues.append(Issue(
+                code="INTERMEDIATE_EVENT_MULTIPLE_INCOMING",
+                message=(f"问题：Intermediate Event {node.id} 有 {incoming_count} 条入边。"
+                         "原因：本项目只允许 role=join Gateway 和 End Event 接收多条入边；"
+                         "请先用符合路径激活语义的 Join 汇合，再以一条边连接该 Event。"),
+                elementIds=[node.id],
+                sourceSentences=node.sourceSentences,
+            ))
+        if final and incoming_count == 0:
+            issues.append(Issue(
+                code="INTERMEDIATE_EVENT_MISSING_INCOMING",
+                message=(f"问题：最终流程中的 Intermediate Event {node.id} 没有入边。"
+                         "原因：Intermediate Event 必须恰好有一条入边。"),
+                elementIds=[node.id],
+                sourceSentences=node.sourceSentences,
+            ))
+        if final and outgoing_count == 0:
+            issues.append(Issue(
+                code="INTERMEDIATE_EVENT_MISSING_OUTGOING",
+                message=(f"问题：最终流程中的 Intermediate Event {node.id} 没有出边。"
+                         "原因：Intermediate Event 必须恰好有一条出边。"),
+                elementIds=[node.id],
+                sourceSentences=node.sourceSentences,
             ))
     reachable: set[str] = {node.id for node in starts}
     queue = deque(reachable)
@@ -78,49 +120,101 @@ def validate_graph(graph: Graph, final: bool = False) -> list[Issue]:
                 sourceSentences=sorted({sid for node in unreachable for sid in node.sourceSentences}),
             ))
     for node in graph.nodes:
-        if node.kind != "gateway" and len(outgoing[node.id]) > 1:
+        if node.kind != "task":
+            continue
+        incoming_count = len(incoming[node.id])
+        outgoing_count = len(outgoing[node.id])
+        if incoming_count > 1:
+            incoming_edges = [edge for edge in graph.edges if edge.target == node.id]
+            connections = ", ".join(
+                f"{edge.id}({edge.source}->{edge.target})" for edge in incoming_edges
+            )
+            reachable_after_task = _reachable_from(node.id, outgoing)
+            loop_edges = [edge for edge in incoming_edges if edge.source in reachable_after_task]
+            loop_detail = (
+                " 其中循环回边为 "
+                + ", ".join(f"{edge.id}({edge.source}->{edge.target})" for edge in loop_edges)
+                + "；循环回边不得直接指向 Task，必须与首次进入边先汇入 Join。"
+                if loop_edges else ""
+            )
             issues.append(Issue(
-                code="IMPLICIT_SPLIT",
-                message=(f"问题：非 Gateway 节点 {node.id} 有 {len(outgoing[node.id])} 条出边。"
-                         "原因：只有 Split Gateway 表示分叉，才可以有多条出边。"),
+                code="TASK_MULTIPLE_INCOMING",
+                message=(f"问题：Task {node.id} 有 {incoming_count} 条入边。"
+                         f"当前连接：{connections}。原因：本项目要求 Task 只有一条入边；"
+                         "请在 Task 前增加由流程语义决定类型的 role=join Gateway，"
+                         "将全部原入边的 target 原子地改接到该 Join，再新增 Join -> Task 的唯一入边。"
+                         f"{loop_detail}"),
                 elementIds=[node.id],
                 sourceSentences=node.sourceSentences,
             ))
-        if node.kind != "gateway" and len(incoming[node.id]) > 1:
+        if outgoing_count > 1:
             issues.append(Issue(
-                code="IMPLICIT_MERGE",
-                message=(f"问题：非 Gateway 节点 {node.id} 有 {len(incoming[node.id])} 条入边。"
-                         "原因：只有 Join Gateway 表示汇合，才可以有多条入边。"),
+                code="TASK_MULTIPLE_OUTGOING",
+                message=(f"问题：Task {node.id} 有 {outgoing_count} 条出边。"
+                         "原因：本项目要求 Task 只有一条出边；请在 Task 后增加由流程语义决定类型的 "
+                         "role=split Gateway，并将原出边改由该 Split 发出。"),
                 elementIds=[node.id],
                 sourceSentences=node.sourceSentences,
             ))
+        if final and incoming_count == 0:
+            issues.append(Issue(
+                code="TASK_MISSING_INCOMING",
+                message=(f"问题：最终流程中的 Task {node.id} 没有入边。"
+                         "原因：最终流程中的每个 Task 必须恰好有一条入边。"),
+                elementIds=[node.id],
+                sourceSentences=node.sourceSentences,
+            ))
+        if final and outgoing_count == 0:
+            issues.append(Issue(
+                code="TASK_MISSING_OUTGOING",
+                message=(f"问题：最终流程中的 Task {node.id} 没有出边。"
+                         "原因：最终流程中的每个 Task 必须恰好有一条出边并连接后续节点或 End Event。"),
+                elementIds=[node.id],
+                sourceSentences=node.sourceSentences,
+            ))
+    for node in graph.nodes:
         if node.kind == "gateway":
-            degree = len(outgoing[node.id]) if node.role == "split" else len(incoming[node.id])
+            required_degrees = (
+                [("出边", len(outgoing[node.id]), "分叉")]
+                if node.role == "split" else
+                [("入边", len(incoming[node.id]), "汇合")]
+            )
             # Incremental snapshots may intentionally leave a gateway open for a
             # branch or join that is described in a later semantic segment.
-            if final and degree < 2:
-                control_edges = [
-                    edge for edge in graph.edges
-                    if (edge.source == node.id if node.role == "split" else edge.target == node.id)
-                ]
-                connections = ", ".join(
-                    f"{edge.id}({edge.source}->{edge.target})" for edge in control_edges
-                ) or "无"
-                direction = "出边" if node.role == "split" else "入边"
-                issues.append(Issue(
-                    code="GATEWAY_DEGREE",
-                    message=(f"问题：{node.role.title()} {node.id} 只有 {degree} 条{direction}：{connections}。"
-                             f"原因：{node.role.title()} 至少需要 2 条{direction}，否则没有形成"
-                             f"{'分叉' if node.role == 'split' else '汇合'}。"),
-                    elementIds=[node.id],
-                    sourceSentences=node.sourceSentences,
-                ))
+            if final:
+                for direction, degree, purpose in required_degrees:
+                    if degree >= 2:
+                        continue
+                    control_edges = [
+                        edge for edge in graph.edges
+                        if (edge.source == node.id if direction == "出边" else edge.target == node.id)
+                    ]
+                    connections = ", ".join(
+                        f"{edge.id}({edge.source}->{edge.target})" for edge in control_edges
+                    ) or "无"
+                    issues.append(Issue(
+                        code="GATEWAY_DEGREE",
+                        message=(f"问题：{node.role.title()} Gateway {node.id} 只有 {degree} 条{direction}："
+                                 f"{connections}。原因：role={node.role} 至少需要 2 条{direction}，"
+                                 f"否则没有形成{purpose}。"),
+                        elementIds=[node.id],
+                        sourceSentences=node.sourceSentences,
+                    ))
             if node.role == "split":
                 if len(incoming[node.id]) > 1:
                     issues.append(Issue(
                         code="SPLIT_MULTIPLE_INCOMING",
                         message=(f"问题：Split {node.id} 有 {len(incoming[node.id])} 条入边。"
-                                 "原因：Split 负责分叉，只能有 1 条入边；Join 负责汇合，才可以多入边。"),
+                                 "原因：role=split 必须一入多出；请在该 Split 前增加一个与其 type 相同的 "
+                                 "role=join Gateway，由 Join 接收原入边后再以一条边连接该 Split。"),
+                        elementIds=[node.id],
+                        sourceSentences=node.sourceSentences,
+                    ))
+                if final and not incoming[node.id]:
+                    issues.append(Issue(
+                        code="SPLIT_MISSING_INCOMING",
+                        message=(f"问题：最终流程中的 Split {node.id} 没有入边。"
+                                 "原因：role=split 必须恰好有一条入边。"),
                         elementIds=[node.id],
                         sourceSentences=node.sourceSentences,
                     ))
@@ -193,10 +287,33 @@ def validate_graph(graph: Graph, final: bool = False) -> list[Issue]:
                 issues.append(Issue(
                     code="JOIN_MULTIPLE_OUTGOING",
                     message=(f"问题：Join {node.id} 有 {len(join_edges)} 条出边：{connections}。"
-                             "原因：Join 负责汇合，只能有 1 条出边；Split 负责分叉，才可以多出边。"),
+                             "原因：role=join 必须多入一出；请在该 Join 后增加一个与其 type 相同的 "
+                             "role=split Gateway，由 Join 以一条边连接该 Split，再由 Split 发出原出边。"),
                     elementIds=[node.id],
                     sourceSentences=node.sourceSentences,
                 ))
+            elif final and not outgoing[node.id]:
+                issues.append(Issue(
+                    code="JOIN_MISSING_OUTGOING",
+                    message=(f"问题：最终流程中的 Join {node.id} 没有出边。"
+                             "原因：role=join 必须恰好有一条出边。"),
+                    elementIds=[node.id],
+                    sourceSentences=node.sourceSentences,
+                ))
+            if node.role == "join":
+                join_edges = [edge for edge in graph.edges if edge.source == node.id]
+                conditional = [
+                    edge.id for edge in join_edges if edge.condition is not None or edge.isDefault
+                ]
+                if conditional:
+                    issues.append(Issue(
+                        code="JOIN_CONDITIONAL_OUTGOING",
+                        message=(f"问题：Join {node.id} 的出边包含 condition 或 default。"
+                                 "原因：Join 只负责汇合，不负责分支判断；条件应位于后续 Split 的出边。"),
+                        elementIds=conditional,
+                        sourceSentences=node.sourceSentences,
+                    ))
+    issues.extend(_validate_gateway_pairing(graph, reachable, final))
     if final:
         if len(starts) != 1:
             issues.append(Issue(
@@ -229,34 +346,13 @@ def validate_graph(graph: Graph, final: bool = False) -> list[Issue]:
                     elementIds=[node.id for node in trapped],
                     sourceSentences=sorted({sid for node in trapped for sid in node.sourceSentences}),
                 ))
-        parallel_joins = [node for node in graph.nodes if node.kind == "gateway"
-                          and node.gatewayType == "parallel" and node.role == "join"]
-        for split in (node for node in graph.nodes if node.id in reachable
-                      and node.kind == "gateway" and node.gatewayType == "parallel"
-                      and node.role == "split"):
-            branch_targets = outgoing[split.id]
-            common_reachable: set[str] | None = None
-            for target in branch_targets:
-                branch_reachable = _reachable_from(target, outgoing)
-                common_reachable = (branch_reachable if common_reachable is None
-                                    else common_reachable.intersection(branch_reachable))
-            matching_joins = [join.id for join in parallel_joins
-                              if common_reachable is not None and join.id in common_reachable]
-            if not matching_joins:
-                issues.append(Issue(
-                    code="PARALLEL_JOIN_MISSING",
-                    message=(f"问题：Parallel Split {split.id} 的分支没有共同的 Parallel Join。"
-                             "原因：进入共同后续前，全部并行分支必须先由 Parallel Join 汇合。"),
-                    elementIds=[split.id],
-                    sourceSentences=split.sourceSentences,
-                ))
         for node in graph.nodes:
-            if node.id in reachable and not outgoing[node.id] and not (
+            if node.id in reachable and not outgoing[node.id] and node.kind != "task" and not (
                 node.kind == "event" and node.eventType == "end"
             ):
                 issues.append(Issue(
                     code="OPEN_NODE",
-                    message=(f"问题：叶子节点 {node.id} 不是 eventType=end 的 End Event。"
+                    message=(f"问题：叶子节点 {node.id} 不是 type=endEvent 的 End Event。"
                              "原因：每条结束路径都必须以 End Event 终止。"),
                     elementIds=[node.id],
                     sourceSentences=node.sourceSentences,
@@ -305,18 +401,26 @@ def validate_incremental_batch(previous: Graph, candidate: Graph, final: bool = 
             node.id in previous_node_ids and node.id not in touched_node_ids
         ):
             continue
-        control_edges = outgoing[node.id] if node.role == "split" else incoming[node.id]
-        if len(control_edges) < 2 and not final:
-            direction = "出边" if node.role == "split" else "入边"
-            issues.append(Issue(
-                code="BATCH_GATEWAY_DEGREE",
-                message=(f"问题：{node.role.title()} {node.id} 暂时只有 {len(control_edges)} 条{direction}。"
-                         f"原因：最终至少需要 2 条{direction}，否则没有形成"
-                         f"{'分叉' if node.role == 'split' else '汇合'}。"),
-                elementIds=[node.id],
-                sourceSentences=node.sourceSentences,
-                severity="warning",
-            ))
+        requirements = (
+            [("出边", outgoing[node.id], "分叉")]
+            if node.role == "split" else
+            [("入边", incoming[node.id], "汇合")]
+            if node.role == "join" else
+            [("入边", incoming[node.id], "汇合"), ("出边", outgoing[node.id], "分叉")]
+        )
+        if not final:
+            for direction, control_edges, purpose in requirements:
+                if len(control_edges) >= 2:
+                    continue
+                issues.append(Issue(
+                    code="BATCH_GATEWAY_DEGREE",
+                    message=(f"问题：{node.role.title()} Gateway {node.id} 暂时只有 "
+                             f"{len(control_edges)} 条{direction}。原因：最终至少需要 2 条{direction}，"
+                             f"否则没有形成{purpose}。"),
+                    elementIds=[node.id],
+                    sourceSentences=node.sourceSentences,
+                    severity="warning",
+                ))
     return issues
 
 
@@ -331,6 +435,195 @@ def _reachable_from(start: str, outgoing: dict[str, list[str]]) -> set[str]:
     return seen
 
 
+def _validate_gateway_pairing(graph: Graph, reachable: set[str], final: bool) -> list[Issue]:
+    """Pair structured joins with their controlling splits without crossing loop back-edges."""
+    node_map = graph.node_map()
+    valid_edges = [
+        edge for edge in graph.edges
+        if edge.source in node_map and edge.target in node_map
+    ]
+    predecessors: dict[str, list[str]] = defaultdict(list)
+    for edge in valid_edges:
+        predecessors[edge.target].append(edge.source)
+    dominators = _dominators(reachable, predecessors, {
+        node.id for node in graph.nodes
+        if node.kind == "event" and node.eventType == "start" and node.id in reachable
+    })
+    back_edge_ids = {
+        edge.id for edge in valid_edges
+        if edge.source in reachable and edge.target in dominators.get(edge.source, set())
+    }
+
+    forward_edges = [edge for edge in valid_edges if edge.id not in back_edge_ids]
+    forward_outgoing: dict[str, list[str]] = defaultdict(list)
+    split_edges: dict[str, list[Any]] = defaultdict(list)
+    join_incoming_edges: dict[str, list[Any]] = defaultdict(list)
+    for edge in forward_edges:
+        forward_outgoing[edge.source].append(edge.target)
+        split_edges[edge.source].append(edge)
+        join_incoming_edges[edge.target].append(edge)
+    all_incoming_edges: dict[str, list[Any]] = defaultdict(list)
+    for edge in valid_edges:
+        all_incoming_edges[edge.target].append(edge)
+
+    splits = [
+        node for node in graph.nodes
+        if node.id in reachable and node.kind == "gateway" and node.role == "split"
+    ]
+    joins = [
+        node for node in graph.nodes
+        if node.id in reachable and node.kind == "gateway" and node.role == "join"
+    ]
+    distance_cache: dict[str, dict[str, int]] = {}
+    issues: list[Issue] = []
+    paired_split_ids: set[str] = set()
+
+    for join in joins:
+        incoming_edges = all_incoming_edges[join.id]
+        if len(incoming_edges) < 2:
+            continue
+        loop_returns = [edge for edge in incoming_edges if edge.id in back_edge_ids]
+        if loop_returns:
+            if join.gatewayType != "exclusive":
+                issues.append(Issue(
+                    code="LOOP_ENTRY_JOIN_TYPE_MISMATCH",
+                    message=(f"问题：循环入口 Join {join.id} 的类型是 {join.gatewayType}。"
+                             "原因：首次进入路径与循环回边属于不同执行轮次，"
+                             "不会同时到达，必须使用 Exclusive Join 汇合。"),
+                    elementIds=[join.id, *[edge.id for edge in loop_returns]],
+                    sourceSentences=join.sourceSentences,
+                ))
+            continue
+
+        forward_incoming = join_incoming_edges[join.id]
+        if len(forward_incoming) < 2:
+            continue
+        candidates: list[tuple[tuple[int, int], Any, dict[str, str]]] = []
+        for split in splits:
+            branches = split_edges[split.id]
+            if len(branches) < 2:
+                continue
+            arm_to_branch: dict[str, str] = {}
+            arm_distances: list[int] = []
+            valid_candidate = True
+            for arm in forward_incoming:
+                matches: list[tuple[str, int]] = []
+                for branch in branches:
+                    if arm.id == branch.id:
+                        matches.append((branch.id, 0))
+                        continue
+                    distances = distance_cache.setdefault(
+                        branch.id, _shortest_distances(branch.target, forward_outgoing)
+                    )
+                    if arm.source in distances:
+                        matches.append((branch.id, distances[arm.source] + 1))
+                if len(matches) != 1:
+                    valid_candidate = False
+                    break
+                branch_id, distance = matches[0]
+                arm_to_branch[arm.id] = branch_id
+                arm_distances.append(distance)
+            if not valid_candidate or len(set(arm_to_branch.values())) < 2:
+                continue
+            candidates.append(((max(arm_distances), sum(arm_distances)), split, arm_to_branch))
+
+        if not candidates:
+            if final:
+                issues.append(Issue(
+                    code="GATEWAY_PAIR_UNRESOLVED",
+                    message=(f"问题：Join {join.id} 无法反向定位唯一的共同 Split。"
+                             "原因：每条 Join 入边应分别来自同一个控制 Split 的不同分支；"
+                             "若是循环入口，则必须能识别出回边。"),
+                    elementIds=[join.id, *[edge.id for edge in forward_incoming]],
+                    sourceSentences=join.sourceSentences,
+                ))
+            continue
+
+        candidates.sort(key=lambda item: item[0])
+        best_score = candidates[0][0]
+        nearest = [item for item in candidates if item[0] == best_score]
+        if len(nearest) != 1:
+            if final:
+                issues.append(Issue(
+                    code="GATEWAY_PAIR_UNRESOLVED",
+                    message=(f"问题：Join {join.id} 有多个同等距离的共同 Split："
+                             f"{', '.join(item[1].id for item in nearest)}。"
+                             "原因：无法唯一确定当前 Join 的控制范围。"),
+                    elementIds=[join.id, *[item[1].id for item in nearest]],
+                    sourceSentences=join.sourceSentences,
+                ))
+            continue
+
+        _, split, arm_to_branch = nearest[0]
+        paired_split_ids.add(split.id)
+        if join.gatewayType != split.gatewayType:
+            mapping = ", ".join(
+                f"{arm_id}<-{branch_id}" for arm_id, branch_id in sorted(arm_to_branch.items())
+            )
+            issues.append(Issue(
+                code="GATEWAY_JOIN_TYPE_MISMATCH",
+                message=(f"问题：Join {join.id} 是 {join.gatewayType}Gateway，但其最近共同控制 "
+                         f"Split {split.id} 是 {split.gatewayType}Gateway（{mapping}）。"
+                         "原因：结构化控制块必须按分支激活语义配对："
+                         "Parallel Split 对应 Parallel Join，Exclusive Split 对应 Exclusive Join，"
+                         "Inclusive Split 对应 Inclusive Join。"),
+                elementIds=[split.id, join.id, *sorted(arm_to_branch)],
+                sourceSentences=sorted(set(split.sourceSentences + join.sourceSentences)),
+            ))
+
+    if final:
+        for split in splits:
+            if split.gatewayType != "parallel" or split.id in paired_split_ids:
+                continue
+            issues.append(Issue(
+                code="PARALLEL_JOIN_MISSING",
+                message=(f"问题：Parallel Split {split.id} 的分支没有配对的 Parallel Join。"
+                         "原因：进入共同后续前，全部并行分支必须先由同一个 "
+                         "Parallel Join 汇合。"),
+                elementIds=[split.id],
+                sourceSentences=split.sourceSentences,
+            ))
+    return issues
+
+
+def _dominators(
+    reachable: set[str], predecessors: dict[str, list[str]], roots: set[str],
+) -> dict[str, set[str]]:
+    if not reachable:
+        return {}
+    dominators = {
+        node_id: ({node_id} if node_id in roots else set(reachable))
+        for node_id in reachable
+    }
+    changed = True
+    while changed:
+        changed = False
+        for node_id in sorted(reachable - roots):
+            incoming = [item for item in predecessors[node_id] if item in reachable]
+            if incoming:
+                common = set.intersection(*(dominators[item] for item in incoming))
+                updated = {node_id, *common}
+            else:
+                updated = {node_id}
+            if updated != dominators[node_id]:
+                dominators[node_id] = updated
+                changed = True
+    return dominators
+
+
+def _shortest_distances(start: str, outgoing: dict[str, list[str]]) -> dict[str, int]:
+    distances = {start: 0}
+    queue = deque([start])
+    while queue:
+        source = queue.popleft()
+        for target in outgoing[source]:
+            if target in distances:
+                continue
+            distances[target] = distances[source] + 1
+            queue.append(target)
+    return distances
+
+
 def open_nodes(graph: Graph) -> list[dict[str, Any]]:
     sources = {edge.source for edge in graph.edges}
     result: list[dict[str, Any]] = []
@@ -340,14 +633,14 @@ def open_nodes(graph: Graph) -> list[dict[str, Any]]:
         item: dict[str, Any] = {
             "id": node.id,
             "name": node.name,
-            "kind": node.kind,
+            "type": node.type,
             "sourceSentences": node.sourceSentences,
-            "introducedInSegment": node.introducedInSegment,
         }
         if node.kind == "gateway":
-            item.update({"gatewayType": node.gatewayType, "role": node.role})
+            item["role"] = node.role
         elif node.kind == "event":
-            item.update({"eventType": node.eventType, "trigger": node.trigger})
+            if node.eventDefinition:
+                item["eventDefinition"] = node.eventDefinition
         result.append(item)
     return result
 
@@ -356,7 +649,7 @@ def gateway_refs(graph: Graph) -> list[dict[str, str]]:
     """Return a compact, status-free index of every gateway in the committed graph."""
     return [{
         "id": node.id,
-        "gatewayType": node.gatewayType,
+        "type": node.type,
         "role": node.role,
         "question": node.name,
     } for node in graph.nodes if node.kind == "gateway"]

@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from app.config import load_settings
+from app.domain import EVENT_TYPES, GATEWAY_TYPES, TASK_TYPES
+from app.evaluation import aggregate_token_usage
 from app.pipeline import Pipeline
 
 
@@ -16,6 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--samples", nargs="+", default=["01", "05", "09"])
     parser.add_argument("--strategy", choices=["semantic", "fixed_length", "single_segment"], default="semantic")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--bpmn-output-dir", type=Path)
     parser.add_argument("--max-steps", type=int, default=200)
     return parser.parse_args()
 
@@ -50,9 +53,9 @@ def run_sample(pipeline: Pipeline, dataset: Path, sample_id: str, strategy: str,
             raise RuntimeError(f"pipeline exceeded {max_steps} steps at {stage}")
         graph = state["graph"]
         generated_stats = {
-            "tasks": sum(node["kind"] == "task" for node in graph["nodes"]),
-            "events": sum(node["kind"] == "event" for node in graph["nodes"]),
-            "gateways": sum(node["kind"] == "gateway" for node in graph["nodes"]),
+            "tasks": sum(node["type"] in TASK_TYPES for node in graph["nodes"]),
+            "events": sum(node["type"] in EVENT_TYPES for node in graph["nodes"]),
+            "gateways": sum(node["type"] in GATEWAY_TYPES for node in graph["nodes"]),
             "sequenceFlows": len(graph["edges"]),
         }
         result = {
@@ -66,12 +69,28 @@ def run_sample(pipeline: Pipeline, dataset: Path, sample_id: str, strategy: str,
             "repairs": len(state["repairHistory"]),
             "llmCalls": len(state["llmCalls"]),
             "llmUsage": state["llmCalls"],
+            "tokenUsage": aggregate_token_usage(state["llmCalls"]),
             "generated": generated_stats,
             "groundTruth": ground_truth_stats(dataset, sample_id),
             "reviewWarnings": state.get("reviewWarnings", []),
+            "structureWarnings": state.get("structureWarnings", []),
+            "repairHistory": state.get("repairHistory", []),
+            "reviewHistory": state.get("reviewHistory", []),
+            "reviewResolutions": state.get("reviewResolutions", []),
+            "rejectedFindings": state.get("rejectedFindings", []),
+            "reviewRevisionFailures": state.get("reviewRevisionFailures", []),
             "agentFailures": state.get("agentFailures", []),
+            "agentAttemptDiagnostics": state.get("agentAttemptDiagnostics", []),
+            "terminalAgentFailures": state.get("terminalAgentFailures", []),
+            "generatorPatchFailure": state.get("generatorPatchFailure"),
+            "soundness": state.get("soundness"),
+            "soundnessHistory": state.get("soundnessHistory", []),
+            "soundnessRepairCount": state.get("soundnessRepairCount", 0),
+            "soundnessRepairExhausted": state.get("soundnessRepairExhausted", False),
+            "soundnessRepairBlocked": state.get("soundnessRepairBlocked", False),
             "segmentPlan": state["segments"],
             "graph": graph,
+            "bpmnXml": state.get("bpmnXml"),
         }
     except Exception as exc:
         result = {
@@ -85,10 +104,19 @@ def run_sample(pipeline: Pipeline, dataset: Path, sample_id: str, strategy: str,
             "repairs": len(state.get("repairHistory", [])),
             "llmCalls": len(state.get("llmCalls", [])),
             "llmUsage": state.get("llmCalls", []),
+            "tokenUsage": aggregate_token_usage(state.get("llmCalls", [])),
             "issues": state.get("issues", []),
             "edits": state.get("edits", []),
             "repairHistory": state.get("repairHistory", []),
             "agentFailures": state.get("agentFailures", []),
+            "agentAttemptDiagnostics": state.get("agentAttemptDiagnostics", []),
+            "terminalAgentFailures": state.get("terminalAgentFailures", []),
+            "generatorPatchFailure": state.get("generatorPatchFailure"),
+            "soundness": state.get("soundness"),
+            "soundnessHistory": state.get("soundnessHistory", []),
+            "soundnessRepairCount": state.get("soundnessRepairCount", 0),
+            "soundnessRepairExhausted": state.get("soundnessRepairExhausted", False),
+            "soundnessRepairBlocked": state.get("soundnessRepairBlocked", False),
             "groundTruth": ground_truth_stats(dataset, sample_id),
         }
     print(
@@ -124,6 +152,13 @@ def main() -> int:
         print(f"report={args.output.resolve()}", flush=True)
     else:
         print(rendered)
+    if args.bpmn_output_dir:
+        args.bpmn_output_dir.mkdir(parents=True, exist_ok=True)
+        for result in results:
+            if result.get("success") and result.get("bpmnXml"):
+                path = args.bpmn_output_dir / f"{result['sample']}.bpmn"
+                path.write_text(result["bpmnXml"], encoding="utf-8")
+        print(f"bpmnDir={args.bpmn_output_dir.resolve()}", flush=True)
     return 0 if report["summary"]["failed"] == 0 else 1
 
 

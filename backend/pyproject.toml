@@ -12,10 +12,16 @@ dependencies = [
   "openai>=1.50,<3",
   "python-dotenv>=1.0,<2",
   "httpx>=0.27,<1",
+  "pm4py>=2.7.15,<3",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9", "httpx>=0.27,<1"]
+evaluation = [
+  "sentence-transformers>=3,<6",
+  "scipy>=1.10,<2",
+  "pulp>=2.8,<4",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
