@@ -110,6 +110,11 @@ def test_every_agent_prompt_has_an_english_counterpart():
         assert prompt(name, "en").strip()
 
 
+def test_planner_prefers_grouping_branches_of_one_broader_business_matter():
+    assert "优先将这些内容归入同一个更宏观的业务事项" in prompt("planner", "zh")
+    assert "prefer grouping them under one broader business matter" in prompt("planner", "en")
+
+
 def test_split_join_pairing_rule_is_synchronized_across_generator_prompts():
     for name in {"generator", "generator_oneshot", "repair_semantic", "repair_structure"}:
         zh = prompt(name, "zh")

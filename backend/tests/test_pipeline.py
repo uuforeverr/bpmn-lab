@@ -7,6 +7,7 @@ from app.domain import EditCall, Graph
 from app.editor import apply_edits, apply_graph_patch
 from app.llm import LlmResult, prompt
 from app.pipeline import AgentOutputValidationError, Pipeline
+from app.segmentation import split_sentences
 from app.validation import validate_graph
 
 
@@ -1743,4 +1744,42 @@ def test_code_sentence_split_preserves_order_and_unique_ids():
     assert state["sentences"] == [
         {"id": "S1", "text": "One."},
         {"id": "S2", "text": "Two."},
+    ]
+
+
+def test_sentence_split_treats_newlines_as_spaces_and_keeps_colon_content_together():
+    sentences = split_sentences(
+        "Title: Inspection\n"
+        "The inspection can begin:\n"
+        "* Questions are asked.\n"
+        "* Buttons are pressed."
+    )
+
+    assert [item.text for item in sentences] == [
+        "Title: Inspection The inspection can begin: * Questions are asked.",
+        "* Buttons are pressed.",
+    ]
+
+
+def test_sentence_split_supports_chinese_and_english_question_and_exclamation_marks():
+    sentences = split_sentences(
+        "Is the application complete? Yes! Continue. 是否完成？是的！继续处理。"
+    )
+
+    assert [item.text for item in sentences] == [
+        "Is the application complete?", "Yes!", "Continue.",
+        "是否完成？", "是的！", "继续处理。",
+    ]
+
+
+def test_sentence_split_protects_common_abbreviations_initialisms_and_numbers():
+    sentences = split_sentences(
+        "Dr. Smith uses e.g. BPMN 2.0 in the U.S. office. "
+        "See Fig. 3 and contact A. Brown. Continue."
+    )
+
+    assert [item.text for item in sentences] == [
+        "Dr. Smith uses e.g. BPMN 2.0 in the U.S. office.",
+        "See Fig. 3 and contact A. Brown.",
+        "Continue.",
     ]

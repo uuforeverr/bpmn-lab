@@ -19,6 +19,8 @@ A semantic segment is a contiguous group of sentences that jointly initiate, per
 
 When adjacent sentences describe one decision and its complementary outcomes, a set of parallel activities and their common continuation, or an explicit convergence, keep them together when doing so does not cross a clear business phase.
 
+When adjacent text clearly describes the same choice, multiple alternative treatments in the same business situation, or parallel activities within the same matter, prefer grouping them under one broader business matter.
+
 # Execution Rules
 
 1. Use a nameable business matter or phase as the primary segmentation criterion.
