@@ -1,0 +1,63 @@
+# Best-effort reconstruction of the model setting reported by the MAO paper.
+# The paper says "GPT-4" but does not disclose a dated snapshot, temperature,
+# token budget, seed, or retry policy. gpt-4-0613 is pinned here because it is
+# the currently documented snapshot behind the legacy `gpt-4` model ID.
+app:
+  database_path: data/bpmn_lab.sqlite3
+  cors_origins:
+    - http://localhost:5173
+
+llm:
+  base_url: https://api.openai.com/v1
+  api_key: ${OPENAI_API_KEY}
+  model: gpt-4-0613
+  # Omit temperature so that no unreported value is presented as a paper fact.
+  temperature: null
+  timeout_seconds: 180
+  max_transport_retries: 2
+  # This is a controlled local assumption, not a value disclosed by the paper.
+  max_output_tokens: 4096
+  max_output_tokens_by_agent: {}
+  max_tokens_parameter: max_tokens
+  # The dated GPT-4 snapshot predates JSON response mode and parallel tool calls.
+  json_response_format: false
+  parallel_tool_calls: null
+  tool_choice: auto
+  thinking: null
+  thinking_parameter: null
+  extra_body: {}
+  extra_body_by_agent: {}
+
+# Keep every agent, including arbitration, on the same reported model family.
+arbitrator_llm:
+  base_url: https://api.openai.com/v1
+  api_key: ${OPENAI_API_KEY}
+  model: gpt-4-0613
+  temperature: null
+  timeout_seconds: 180
+  max_transport_retries: 2
+  max_output_tokens: 4096
+  max_tokens_parameter: max_tokens
+  json_response_format: false
+  parallel_tool_calls: null
+  tool_choice: auto
+  thinking: null
+  thinking_parameter: null
+
+layout:
+  enabled: true
+  base_url: http://127.0.0.1:3001
+  timeout_seconds: 15
+
+# These are the current method's own settings. They are not claimed to be MAO
+# settings; only the external model family is being controlled for comparison.
+pipeline:
+  max_semantic_repairs: 5
+  max_structure_repairs: 5
+  fixed_length_sentences: 3
+  max_agent_retries: 2
+  reviewer_enabled: true
+  max_review_discussion_rounds: 3
+
+prompts:
+  language: en

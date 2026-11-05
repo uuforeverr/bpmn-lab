@@ -3,26 +3,24 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 
+import pysbd
+
 from .domain import Segment, Sentence
 
 
+_ENGLISH_SENTENCE_SEGMENTER = pysbd.Segmenter(language="en", clean=False)
+
+
 def split_sentences(text: str) -> list[Sentence]:
-    text = text.replace("\r\n", "\n").strip()
-    protected: dict[str, str] = {}
-
-    def protect(match: re.Match[str]) -> str:
-        token = f"__ABBR_{len(protected)}__"
-        protected[token] = match.group(0)
-        return token
-
-    text = re.sub(r"(?i)\b(?:e\.g\.|i\.e\.|mr\.|mrs\.|ms\.|dr\.|prof\.)", protect, text)
-    parts = re.split(r"(?<=[。！？])\s*|(?<=\.)\s+|\n+", text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    text = re.sub(r"\s*\n+\s*", " ", text)
+    text = re.sub(r"[ \t]+", " ", text)
     cleaned = []
-    for part in parts:
-        for token, value in protected.items():
-            part = part.replace(token, value)
-        if part.strip():
-            cleaned.append(part.strip())
+    for english_part in _ENGLISH_SENTENCE_SEGMENTER.segment(text):
+        for part in re.split(r"(?<=[。！？])\s*", english_part):
+            part = re.sub(r"[ \t]+", " ", part).strip()
+            if part:
+                cleaned.append(part)
     return [Sentence(id=f"S{i}", text=value) for i, value in enumerate(cleaned, 1)]
 
 

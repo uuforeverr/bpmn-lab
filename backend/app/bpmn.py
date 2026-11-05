@@ -18,10 +18,7 @@ def q(ns: str, tag: str) -> str:
 
 
 def _tag(node: Node) -> str:
-    if node.kind == "task": return "task"
-    if node.kind == "gateway":
-        return {"exclusive": "exclusiveGateway", "parallel": "parallelGateway", "inclusive": "inclusiveGateway"}[node.gatewayType]
-    return {"start": "startEvent", "intermediate": "intermediateCatchEvent" if node.eventRole != "throw" else "intermediateThrowEvent", "end": "endEvent"}[node.eventType]
+    return node.type
 
 
 def graph_to_bpmn(graph: Graph) -> str:
@@ -29,15 +26,21 @@ def graph_to_bpmn(graph: Graph) -> str:
     process = SubElement(definitions, q(BPMN, "process"), {"id": graph.process.id, "name": graph.process.name, "isExecutable": "false"})
     for node in graph.nodes:
         attrs = {"id": node.id, "name": node.name}
-        if node.kind == "gateway" and node.role == "split":
+        if node.kind == "gateway":
+            attrs["gatewayDirection"] = {
+                "split": "Diverging",
+                "join": "Converging",
+            }[node.role]
+        if node.kind == "task" or (
+            node.kind == "gateway" and node.gatewayType in {"exclusive", "inclusive"}
+        ):
             default_flow = next((edge.id for edge in graph.edges if edge.source == node.id and edge.isDefault), None)
             if default_flow:
                 attrs["default"] = default_flow
         element = SubElement(process, q(BPMN, _tag(node)), attrs)
-        if node.kind == "event" and node.eventType == "intermediate":
-            definition_tag = {"message": "messageEventDefinition", "timer": "timerEventDefinition"}.get(node.trigger)
-            if definition_tag:
-                SubElement(element, q(BPMN, definition_tag), {"id": f"{node.id}_definition"})
+        if node.kind == "event" and node.eventDefinition:
+            definition_tag = f"{node.eventDefinition}EventDefinition"
+            SubElement(element, q(BPMN, definition_tag), {"id": f"{node.id}_definition"})
     for edge in graph.edges:
         attrs = {"id": edge.id, "sourceRef": edge.source, "targetRef": edge.target}
         if edge.condition: attrs["name"] = edge.condition.label

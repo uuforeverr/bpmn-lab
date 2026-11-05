@@ -1,0 +1,65 @@
+app:
+  database_path: data/bpmn_lab.sqlite3
+  cors_origins:
+    - http://localhost:5173
+
+llm:
+  base_url: https://llm-hv2gpeceqr2436sp.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+  api_key: ${DASHSCOPE_API_KEY}
+  model: qwen3.8-max-0902
+  temperature: 0.2
+  timeout_seconds: 120
+  max_transport_retries: 2
+  max_output_tokens: 8192
+  max_output_tokens_by_agent:
+    repair: 16384
+  max_tokens_parameter: max_tokens
+  json_response_format: true
+  parallel_tool_calls: true
+  tool_choice: required
+
+  thinking: disabled
+  thinking_parameter: enable_thinking
+  thinking_enabled_value: true
+  thinking_disabled_value: false
+  thinking_by_agent:
+    planner: disabled
+    generator: disabled
+    reviewer: disabled
+    repair: enabled
+
+  extra_body: {}
+  extra_body_by_agent: {}
+
+arbitrator_llm:
+  base_url: https://api.deepseek.com
+  api_key: ${OPENAI_API_KEY}
+  model: deepseek-v4-pro
+  temperature: 0.2
+  timeout_seconds: 120
+  max_transport_retries: 2
+  max_output_tokens: 8192
+  max_tokens_parameter: max_tokens
+  json_response_format: true
+  thinking: enabled
+  thinking_parameter: thinking
+  thinking_enabled_value:
+    type: enabled
+  thinking_disabled_value:
+    type: disabled
+
+layout:
+  enabled: true
+  base_url: http://127.0.0.1:3001
+  timeout_seconds: 15
+
+pipeline:
+  max_semantic_repairs: 5
+  max_structure_repairs: 5
+  fixed_length_sentences: 3
+  max_agent_retries: 2
+  reviewer_enabled: true
+  max_review_discussion_rounds: 3
+
+prompts:
+  language: en
