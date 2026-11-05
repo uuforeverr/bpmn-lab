@@ -64,6 +64,7 @@ class LayoutConfig(BaseModel):
 
 class PipelineConfig(BaseModel):
     max_semantic_repairs: int = 5
+    max_structure_repairs: int = Field(default=5, ge=0)
     max_soundness_repairs: int = Field(default=5, ge=0)
     fixed_length_sentences: int = 3
     max_agent_retries: int = 2

@@ -53,6 +53,7 @@ layout:
 # settings; only the external model family is being controlled for comparison.
 pipeline:
   max_semantic_repairs: 5
+  max_structure_repairs: 5
   fixed_length_sentences: 3
   max_agent_retries: 2
   reviewer_enabled: true

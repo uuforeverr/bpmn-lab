@@ -7,8 +7,8 @@ from pydantic import ValidationError
 
 from .bpmn import graph_to_bpmn
 from .config import Settings
-from .domain import Edge, EditCall, Graph, Issue, Node, Segment, Sentence, node_kind
-from .editor import EditError, apply_edits, apply_graph_patch
+from .domain import Edge, Graph, Issue, Node, Segment, Sentence, node_kind
+from .editor import EditError, apply_graph_patch
 from .llm import LlmClient, parse_json_object, prompt
 from .layout import BpmnLayoutClient
 from .process_quality import assess_soundness
@@ -17,9 +17,17 @@ from .validation import validate_graph, validate_incremental_batch
 
 
 STAGES = ["INPUT_READY", "SENTENCES_PREPARED", "SEGMENTS_CREATED",
-          "CONTEXT_BUILT", "SUBGRAPH_GENERATED", "EDITS_GENERATED", "CANDIDATE_APPLIED", "STRUCTURE_VALIDATED",
-          "SEMANTIC_REVIEWED", "GENERATOR_RECONSIDERING", "GENERATOR_DECIDED", "ARBITRATING", "REPAIRING",
+          "CONTEXT_BUILT", "SUBGRAPH_GENERATED", "CANDIDATE_APPLIED", "STRUCTURE_VALIDATED",
+          "SEMANTIC_REVIEWED", "SEMANTIC_REPAIRING", "SEMANTIC_REPAIR_DECIDED", "ARBITRATING",
+          "STRUCTURE_REPAIRING",
           "SEGMENT_COMMITTED", "FINAL_VALIDATED", "BPMN_GENERATED", "COMPLETED"]
+
+LEGACY_STAGE_ALIASES = {
+    "GENERATOR_RECONSIDERING": "SEMANTIC_REPAIRING",
+    "GENERATOR_DECIDED": "SEMANTIC_REPAIR_DECIDED",
+    "REPAIRING": "STRUCTURE_REPAIRING",
+    "EDITS_GENERATED": "STRUCTURE_REPAIRING",
+}
 
 
 class AgentOutputValidationError(ValueError):
@@ -60,29 +68,44 @@ class Pipeline:
         graph.metadata.promptVersion = "v10-add-remove-graph-delta"
         return {"strategy": strategy, "sentences": [], "segments": [], "segmentIndex": 0,
                 "graph": graph.model_dump(), "candidate": None, "subgraph": None,
-                "edits": [], "issues": [], "snapshots": [],
-                "llmCalls": [], "repairCount": 0, "repairHistory": [], "applyingRepair": False,
+                "issues": [], "snapshots": [],
+                "llmCalls": [], "repairCount": 0, "repairHistory": [],
                 "agentFailures": [], "agentAttemptDiagnostics": [],
                 "terminalAgentFailures": [],
                 "structureWarnings": [], "reviewWarnings": [], "reviewHistory": [],
                 "reviewFindings": [], "reviewResolutions": [], "rejectedFindings": [],
-                "reviewRevisionCount": 0, "reviewRevisionFailures": [],
+                "semanticRepairCount": 0, "semanticRepairFailures": [],
                 "reviewDiscussionRound": 0, "reviewDiscussionHistory": [],
                 "arbitrationHistory": [], "pendingArbitrationFindings": [],
-                "commitAfterArbitrationRevision": False,
+                "commitAfterArbitrationRepair": False,
                 "reviewerEnabled": self.settings.pipeline.reviewer_enabled,
-                "repairPlan": None, "repairLimitEvents": [],
+                "repairLimitEvents": [],
                 "finalizing": False, "soundnessRepairing": False,
                 "soundnessRepairCount": 0, "soundnessRepairExhausted": False,
                 "soundnessRepairBlocked": False,
                 "soundness": None, "soundnessHistory": [], "bpmnXml": None}
 
     def step(self, stage: str, state: dict, input_text: str) -> tuple[str, dict]:
+        previous_stage = stage
+        stage = LEGACY_STAGE_ALIASES.get(stage, stage)
+        if previous_stage == "EDITS_GENERATED":
+            history = state.get("repairHistory", [])
+            if not state.get("issues") and history:
+                state["issues"] = history[-1].get("issues", [])
+            state["repairCount"] = max(0, state.get("repairCount", 0) - 1)
+            if state.get("soundnessRepairing"):
+                state["soundnessRepairCount"] = state["repairCount"]
+        state.setdefault("semanticRepairCount", state.get("reviewRevisionCount", 0))
+        state.setdefault("semanticRepairFailures", state.get("reviewRevisionFailures", []))
+        if "semanticRepair" not in state and state.get("generatorRevision") is not None:
+            state["semanticRepair"] = state["generatorRevision"]
+        if state.pop("commitAfterArbitrationRevision", False):
+            state["commitAfterArbitrationRepair"] = True
         graph = Graph.model_validate(state["graph"])
         reviewer_enabled = self.settings.pipeline.reviewer_enabled
         state["reviewerEnabled"] = reviewer_enabled
         if not reviewer_enabled and stage in {
-            "SEMANTIC_REVIEWED", "GENERATOR_RECONSIDERING", "GENERATOR_DECIDED", "ARBITRATING",
+            "SEMANTIC_REVIEWED", "SEMANTIC_REPAIRING", "SEMANTIC_REPAIR_DECIDED", "ARBITRATING",
         }:
             return self._commit_segment(state)
         if stage == "INPUT_READY":
@@ -124,7 +147,7 @@ class Pipeline:
                     state["context"] = self._finalization_context(state, graph)
                     state["repairCount"] = 0
                     state["finalizing"] = True
-                    return "REPAIRING", state
+                    return "STRUCTURE_REPAIRING", state
                 return "FINAL_VALIDATED", state
             state["context"] = self._context(state, graph)
             return "CONTEXT_BUILT", state
@@ -138,9 +161,8 @@ class Pipeline:
                     validator=lambda value: self._validate_generated_patch(value, graph),
                 )
             except AgentRetriesExhaustedError as exc:
-                # A generator-format failure is repairable graph work, not a reason to
-                # abort the whole incremental run. Preserve the invalid artifact and
-                # let the existing semantic repair loop reconstruct a valid patch.
+                # Preserve the invalid artifact so the structural Repair mode can
+                # reconstruct one valid Graph Patch against the current graph.
                 state["subgraph"] = exc.last_invalid_output
                 state["candidate"] = graph.model_dump()
                 state["issues"] = exc.issues
@@ -152,9 +174,7 @@ class Pipeline:
                     "issues": exc.issues,
                 }
                 state["repairCount"] = 0
-                state["applyingRepair"] = False
-                return "REPAIRING", state
-            state["edits"] = []
+                return "STRUCTURE_REPAIRING", state
             return "SUBGRAPH_GENERATED", state
         if stage == "SUBGRAPH_GENERATED":
             segment = state["segments"][state["segmentIndex"]]
@@ -174,35 +194,8 @@ class Pipeline:
                     message=f"Generate Graph Patch 无法应用：{exc}",
                     sourceSentences=segment["sentenceIds"],
                 ).model_dump()]
-                return "REPAIRING", state
+                return "STRUCTURE_REPAIRING", state
             state["candidate"] = candidate.model_dump()
-            return "CANDIDATE_APPLIED", state
-        if stage == "EDITS_GENERATED":
-            segment = ({"id": "FINALIZATION", "sentenceIds": []} if state.get("finalizing") else
-                       state["segments"][state["segmentIndex"]])
-            repair_base = state.get("applyingRepair") and state.get("candidate")
-            base = Graph.model_validate(state["candidate"]) if repair_base else graph
-            try:
-                candidate = apply_edits(base, [EditCall.model_validate(c) for c in state["edits"]], segment["id"])
-            except (EditError, ValidationError, KeyError, TypeError, ValueError) as exc:
-                state["issues"] = [Issue(
-                    code="EDIT_APPLICATION_FAILED",
-                    message=f"工具编辑无法应用：{exc}",
-                    sourceSentences=segment["sentenceIds"],
-                ).model_dump()]
-                state["applyingRepair"] = False
-                return "REPAIRING", state
-            state["candidate"] = candidate.model_dump()
-            state["applyingRepair"] = False
-            if state.get("finalizing"):
-                issues = validate_graph(candidate, final=True)
-                state["issues"] = [issue.model_dump() for issue in issues]
-                if issues:
-                    return "REPAIRING", state
-                state["graph"] = candidate.model_dump()
-                state["candidate"] = None
-                state["finalizing"] = False
-                return "FINAL_VALIDATED", state
             return "CANDIDATE_APPLIED", state
         if stage == "CANDIDATE_APPLIED":
             candidate = Graph.model_validate(state["candidate"])
@@ -229,8 +222,8 @@ class Pipeline:
             ]
             return "STRUCTURE_VALIDATED", state
         if stage == "STRUCTURE_VALIDATED":
-            if state["issues"]: return "REPAIRING", state
-            if state.pop("commitAfterArbitrationRevision", False):
+            if state["issues"]: return "STRUCTURE_REPAIRING", state
+            if state.pop("commitAfterArbitrationRepair", False):
                 return self._commit_segment(state)
             if not reviewer_enabled:
                 state["review"] = None
@@ -265,14 +258,14 @@ class Pipeline:
             return "SEMANTIC_REVIEWED", state
         if stage == "SEMANTIC_REVIEWED":
             if state.get("reviewFindings"):
-                if state.get("reviewRevisionCount", 0) >= self.settings.pipeline.max_semantic_repairs:
-                    return self._accept_unrevised_candidate(
+                if state.get("semanticRepairCount", 0) >= self.settings.pipeline.max_semantic_repairs:
+                    return self._accept_unrepaired_candidate(
                         state,
                         f"语义修订已达到上限 {self.settings.pipeline.max_semantic_repairs}",
                     )
-                return "GENERATOR_RECONSIDERING", state
+                return "SEMANTIC_REPAIRING", state
             return self._commit_segment(state)
-        if stage == "GENERATOR_RECONSIDERING":
+        if stage == "SEMANTIC_REPAIRING":
             self._require_llm()
             findings = state.get("reviewFindings", [])
             payload = {
@@ -286,11 +279,11 @@ class Pipeline:
             if state.get("arbitrationDecisions"):
                 payload["arbitrationDecisions"] = state["arbitrationDecisions"]
             try:
-                revision = self._complete_json(
-                    state, "generator",
-                    [{"role": "system", "content": self._prompt("generator_revision")},
+                repair_result = self._complete_json(
+                    state, "repair",
+                    [{"role": "system", "content": self._prompt("repair_semantic")},
                      {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
-                    validator=lambda value: self._validate_generator_revision(
+                    validator=lambda value: self._validate_semantic_repair(
                         value, findings, Graph.model_validate(state["candidate"]),
                         required_decisions={
                             item["findingId"]: item["decision"]
@@ -301,18 +294,18 @@ class Pipeline:
             except ValueError as exc:
                 if state.get("arbitrationDecisions"):
                     raise
-                return self._accept_unrevised_candidate(state, str(exc))
-            state["generatorRevision"] = revision
-            return "GENERATOR_DECIDED", state
-        if stage == "GENERATOR_DECIDED":
-            revision = state["generatorRevision"]
+                return self._accept_unrepaired_candidate(state, str(exc))
+            state["semanticRepair"] = repair_result
+            return "SEMANTIC_REPAIR_DECIDED", state
+        if stage == "SEMANTIC_REPAIR_DECIDED":
+            repair_result = state["semanticRepair"]
             findings_by_id = {item["id"]: item for item in state.get("reviewFindings", [])}
             accepted_ids = {
-                item["findingId"] for item in revision["decisions"]
+                item["findingId"] for item in repair_result["decisions"]
                 if item["decision"] == "accept"
             }
             resolutions = []
-            for item in revision["decisions"]:
+            for item in repair_result["decisions"]:
                 finding = findings_by_id[item["findingId"]]
                 resolution = {"finding": finding, **item}
                 resolutions.append(resolution)
@@ -323,7 +316,7 @@ class Pipeline:
                     "segmentId": state["segments"][state["segmentIndex"]]["id"],
                     "round": state["reviewDiscussionRound"],
                     "reviewFindings": state.get("reviewFindings", []),
-                    "generatorDecisions": revision["decisions"],
+                    "repairDecisions": repair_result["decisions"],
                 })
             reached_discussion_limit = (
                 bool(rejected_resolutions)
@@ -341,18 +334,17 @@ class Pipeline:
                 state["reviewFindings"] = []
                 return "STRUCTURE_VALIDATED", state
             segment = state["segments"][state["segmentIndex"]]
-            patch = revision["patch"]
-            candidate_before_revision = Graph.model_validate(state["candidate"])
+            patch = repair_result["patch"]
+            candidate_before_repair = Graph.model_validate(state["candidate"])
             candidate = apply_graph_patch(
-                candidate_before_revision,
+                candidate_before_repair,
                 patch["addNodes"], patch["addEdges"], segment["id"],
                 patch["removeNodeIds"], patch["removeEdgeIds"],
             )
             state["reviewFindings"] = []
             state["candidate"] = candidate.model_dump()
-            state["subgraph"] = patch
             state["reviewResolutions"] = resolutions
-            state["reviewRevisionCount"] = state.get("reviewRevisionCount", 0) + 1
+            state["semanticRepairCount"] = state.get("semanticRepairCount", 0) + 1
             state.pop("arbitrationDecisions", None)
             if reached_discussion_limit:
                 state["pendingArbitrationFindings"] = [
@@ -407,13 +399,13 @@ class Pipeline:
             state["arbitrationDecisions"] = [
                 item for item in decisions if item["decision"] == "accept"
             ]
-            state["commitAfterArbitrationRevision"] = True
-            return "GENERATOR_RECONSIDERING", state
-        if stage == "REPAIRING":
+            state["commitAfterArbitrationRepair"] = True
+            return "SEMANTIC_REPAIRING", state
+        if stage == "STRUCTURE_REPAIRING":
             repair_limit = (
                 self.settings.pipeline.max_soundness_repairs
                 if state.get("soundnessRepairing")
-                else self.settings.pipeline.max_semantic_repairs
+                else self.settings.pipeline.max_structure_repairs
             )
             if state["repairCount"] >= repair_limit:
                 return self._accept_repair_limited_candidate(state)
@@ -421,34 +413,12 @@ class Pipeline:
                 self._require_llm()
             except Exception as exc:
                 if state.get("soundnessRepairing"):
-                    return self._abort_soundness_repair(state, exc, "repair_plan")
+                    return self._abort_soundness_repair(state, exc, "repair")
                 raise
-            plan_payload = {
+            repair_payload = {
                 "descriptionPrefix": self._description_prefix(state),
                 "candidateGraph": self._graph_view(state["candidate"]),
                 "issues": state["issues"],
-            }
-            if state.get("generatorPatchFailure"):
-                plan_payload["currentSegment"] = state["generatorPatchFailure"]["currentSegment"]
-                plan_payload["failedGeneratedPatch"] = state["generatorPatchFailure"]["lastInvalidPatch"]
-            if state.get("soundnessRepairing"):
-                plan_payload["soundnessDiagnostics"] = state.get("soundnessPromptDiagnostics", {})
-            try:
-                plan = self._complete_json(
-                    state, "repair_plan",
-                    [{"role": "system", "content": self._prompt("repair_plan")},
-                     {"role": "user", "content": json.dumps(plan_payload, ensure_ascii=False)}],
-                    validator=self._validate_repair_plan,
-                )
-            except Exception as exc:
-                if state.get("soundnessRepairing"):
-                    return self._abort_soundness_repair(state, exc, "repair_plan")
-                raise
-            state["repairPlan"] = plan["repairPlan"]
-            repair_payload = {
-                "candidateGraph": self._graph_view(state["candidate"]),
-                "issues": state["issues"],
-                "repairPlan": plan["repairPlan"],
             }
             if state.get("generatorPatchFailure"):
                 repair_payload["currentSegment"] = state["generatorPatchFailure"]["currentSegment"]
@@ -456,29 +426,59 @@ class Pipeline:
             if state.get("soundnessRepairing"):
                 repair_payload["soundnessDiagnostics"] = state.get("soundnessPromptDiagnostics", {})
             try:
-                result = self._complete_tools(
+                patch = self._complete_json(
                     state, "repair",
-                    [{"role": "system", "content": self._prompt("repair")},
+                    [{"role": "system", "content": self._prompt("repair_structure")},
                      {"role": "user", "content": json.dumps(repair_payload, ensure_ascii=False)}],
-                    repair=True,
+                    validator=lambda value: self._validate_repair_patch(
+                        value, Graph.model_validate(state["candidate"])
+                    ),
                 )
             except Exception as exc:
                 if state.get("soundnessRepairing"):
                     return self._abort_soundness_repair(state, exc, "repair")
                 raise
-            generated_edits = [call.model_dump() for call in result.tool_calls]
-            state["repairHistory"].append({"attempt": state["repairCount"] + 1,
-                                            "issues": state["issues"],
-                                            "repairPlan": plan["repairPlan"],
-                                            "generatedSubgraph": state.get("subgraph"),
-                                            "edits": generated_edits})
+            segment_id = (
+                "FINALIZATION" if state.get("finalizing")
+                else state["segments"][state["segmentIndex"]]["id"]
+            )
+            try:
+                candidate = apply_graph_patch(
+                    Graph.model_validate(state["candidate"]),
+                    patch["addNodes"], patch["addEdges"], segment_id,
+                    patch["removeNodeIds"], patch["removeEdgeIds"],
+                )
+            except (EditError, ValidationError, KeyError, TypeError, ValueError) as exc:
+                if state.get("soundnessRepairing"):
+                    return self._abort_soundness_repair(state, exc, "repair")
+                state["issues"] = [Issue(
+                    code="REPAIR_GRAPH_PATCH_APPLICATION_FAILED",
+                    message=f"Repair Graph Patch 无法应用：{exc}",
+                ).model_dump()]
+                return "STRUCTURE_REPAIRING", state
+            state["repairHistory"].append({
+                "mode": "soundness" if state.get("soundnessRepairing") else "structure",
+                "attempt": state["repairCount"] + 1,
+                "issues": state["issues"],
+                "generatedSubgraph": state.get("subgraph"),
+                "patch": patch,
+            })
             state["repairCount"] += 1
             if state.get("soundnessRepairing"):
                 state["soundnessRepairCount"] = state["repairCount"]
-            state["edits"] = generated_edits
+            state["structureRepairPatch"] = patch
+            state["candidate"] = candidate.model_dump()
             state["issues"] = []
-            state["applyingRepair"] = state.get("candidate") is not None
-            return "EDITS_GENERATED", state
+            if state.get("finalizing"):
+                issues = validate_graph(candidate, final=True)
+                state["issues"] = [issue.model_dump() for issue in issues]
+                if issues:
+                    return "STRUCTURE_REPAIRING", state
+                state["graph"] = candidate.model_dump()
+                state["candidate"] = None
+                state["finalizing"] = False
+                return "FINAL_VALIDATED", state
+            return "CANDIDATE_APPLIED", state
         if stage == "FINAL_VALIDATED":
             final_graph = Graph.model_validate(state["graph"])
             semantic_xml = graph_to_bpmn(final_graph)
@@ -511,7 +511,7 @@ class Pipeline:
                         "diagnostics": prompt_diagnostics,
                     }]
                     state["finalizing"] = True
-                    return "REPAIRING", state
+                    return "STRUCTURE_REPAIRING", state
                 if not state.get("soundnessRepairBlocked"):
                     state["soundnessRepairExhausted"] = True
                     state["soundnessRepairing"] = False
@@ -572,30 +572,31 @@ class Pipeline:
         state["subgraph"] = None
         state["reviewFindings"] = []
         state["reviewResolutions"] = []
-        state["reviewRevisionCount"] = 0
+        state["semanticRepairCount"] = 0
         state["reviewDiscussionRound"] = 0
         state["pendingArbitrationFindings"] = []
-        state.pop("generatorRevision", None)
+        state.pop("semanticRepair", None)
+        state.pop("structureRepairPatch", None)
         state.pop("arbitrationDecisions", None)
-        state.pop("commitAfterArbitrationRevision", None)
+        state.pop("commitAfterArbitrationRepair", None)
         state.pop("generatorPatchFailure", None)
         state["segmentIndex"] += 1
         state["repairCount"] = 0
         return "SEGMENT_COMMITTED", state
 
-    def _accept_unrevised_candidate(self, state: dict, error: str) -> tuple[str, dict]:
+    def _accept_unrepaired_candidate(self, state: dict, error: str) -> tuple[str, dict]:
         segment = state["segments"][state["segmentIndex"]]
         failure = {
             "segmentId": segment["id"],
             "message": error,
             "findings": state.get("reviewFindings", []),
-            "decisions": state.get("generatorRevision", {}).get("decisions", []),
+            "decisions": state.get("semanticRepair", {}).get("decisions", []),
             "candidateRetained": True,
         }
-        state.setdefault("reviewRevisionFailures", []).append(failure)
+        state.setdefault("semanticRepairFailures", []).append(failure)
         state.setdefault("reviewWarnings", []).append({
             "segmentId": segment["id"],
-            "code": "REVIEW_REVISION_FAILED",
+            "code": "SEMANTIC_REPAIR_FAILED",
             "message": error,
             "severity": "warning",
         })
@@ -612,7 +613,7 @@ class Pipeline:
         repair_limit = (
             self.settings.pipeline.max_soundness_repairs
             if state.get("soundnessRepairing")
-            else self.settings.pipeline.max_semantic_repairs
+            else self.settings.pipeline.max_structure_repairs
         )
         message = f"局部修订已达到上限 {repair_limit}，保留最后一次修复产物"
         remaining_issues = list(state.get("issues", []))
@@ -1116,7 +1117,7 @@ class Pipeline:
         return {"findings": findings}
 
     @classmethod
-    def _validate_generator_revision(
+    def _validate_semantic_repair(
         cls, value: dict, findings: list[dict], candidate: Graph,
         required_decisions: dict[str, str] | None = None,
     ) -> dict:
@@ -1126,8 +1127,8 @@ class Pipeline:
         issues: list[dict] = []
         if extra_fields:
             issues.append({
-                "code": "GENERATOR_REVISION_EXTRA_FIELDS",
-                "message": f"Generator 修订输出包含未定义字段: {', '.join(extra_fields)}",
+                "code": "SEMANTIC_REPAIR_EXTRA_FIELDS",
+                "message": f"Repair 语义修复输出包含未定义字段: {', '.join(extra_fields)}",
             })
         if not isinstance(decisions, list):
             issues.append({"code": "DECISIONS_NOT_ARRAY", "message": "decisions 必须是数组"})
@@ -1190,7 +1191,7 @@ class Pipeline:
                 "code": "ACCEPTED_FINDINGS_REQUIRE_PATCH",
                 "message": "存在 accept 时必须直接返回非空 Graph Patch",
             }])
-        validated_patch = cls._validate_generator_revision_patch(patch, candidate) if accepted else None
+        validated_patch = cls._validate_repair_patch(patch, candidate) if accepted else None
         return {"decisions": normalized, "patch": validated_patch}
 
     @staticmethod
@@ -1247,18 +1248,8 @@ class Pipeline:
             raise AgentOutputValidationError(issues)
         return {"decisions": normalized}
 
-    @staticmethod
-    def _validate_repair_plan(value: dict) -> dict:
-        if set(value) != {"repairPlan"} or not isinstance(value.get("repairPlan"), str) \
-                or not value["repairPlan"].strip():
-            raise AgentOutputValidationError([{
-                "code": "INVALID_REPAIR_PLAN",
-                "message": "repairPlan 必须是唯一字段且为非空字符串",
-            }])
-        return {"repairPlan": value["repairPlan"].strip()}
-
     @classmethod
-    def _validate_generator_revision_patch(cls, value: dict, candidate: Graph) -> dict:
+    def _validate_repair_patch(cls, value: dict, candidate: Graph) -> dict:
         patch = cls._validate_generated_patch(value, candidate)
         revised = apply_graph_patch(
             candidate,
@@ -1268,27 +1259,9 @@ class Pipeline:
         if revised.nodes == candidate.nodes and revised.edges == candidate.edges:
             raise AgentOutputValidationError([{
                 "code": "ACCEPTED_PATCH_HAS_NO_EFFECT",
-                "message": "存在 accept 时，Graph Patch 必须实际改变 candidateGraph",
+                "message": "Repair Graph Patch 必须实际改变 candidateGraph",
             }])
         return patch
-
-    def _complete_tools(self, state: dict, agent: str, messages: list[dict], repair: bool = False):
-        attempts = self.settings.pipeline.max_agent_retries + 1
-        last_error = "no tool calls"
-        for attempt in range(1, attempts + 1):
-            try:
-                result = self.llm.complete(messages, tools=True, repair=repair, agent=agent)
-                if result.tool_calls:
-                    self._record(state, agent, result)
-                    return result
-                last_error = "no tool calls"
-                self._record(state, agent, result)
-            except ValueError as exc:
-                last_error = str(exc)
-            state.setdefault("agentFailures", []).append(
-                {"agent": agent, "attempt": attempt, "error": last_error}
-            )
-        raise ValueError(f"{agent} failed after {attempts} attempts: {last_error}")
 
     def _require_llm(self):
         if not self.llm: raise RuntimeError("请在配置文件中设置模型并通过环境变量提供 API key")

@@ -32,10 +32,14 @@ STAGE_ACTIVITY = {
     "SUBGRAPH_GENERATED": "pipeline",
     "STRUCTURE_VALIDATED": "reviewer",
     "SEMANTIC_REVIEWED": "pipeline",
-    "GENERATOR_RECONSIDERING": "generator",
-    "GENERATOR_DECIDED": "generator",
+    "SEMANTIC_REPAIRING": "repair",
+    "SEMANTIC_REPAIR_DECIDED": "repair",
+    "GENERATOR_RECONSIDERING": "repair",
+    "GENERATOR_DECIDED": "repair",
     "ARBITRATING": "arbitrator",
+    "STRUCTURE_REPAIRING": "repair",
     "REPAIRING": "repair",
+    "EDITS_GENERATED": "repair",
     "FINAL_VALIDATED": "bpmn_layout",
 }
 
@@ -59,7 +63,8 @@ def mark_running(run: dict):
     active_agent = STAGE_ACTIVITY.get(run["stage"], "pipeline")
     if run["stage"] in {
         "STRUCTURE_VALIDATED", "SEMANTIC_REVIEWED",
-        "GENERATOR_RECONSIDERING", "GENERATOR_DECIDED", "ARBITRATING",
+        "SEMANTIC_REPAIRING", "SEMANTIC_REPAIR_DECIDED", "ARBITRATING",
+        "GENERATOR_RECONSIDERING", "GENERATOR_DECIDED",
     } and not settings.pipeline.reviewer_enabled:
         active_agent = "pipeline"
     state["activeAgent"] = active_agent
@@ -73,7 +78,7 @@ def health():
         "modelConfigured": bool(settings.llm.model and settings.llm.resolved_key()),
         "thinkingModes": {
             agent: settings.llm.thinking_for(agent)
-            for agent in ("planner", "generator", "reviewer", "repair_plan", "repair")
+            for agent in ("planner", "generator", "reviewer", "repair")
         },
         "arbitratorModelConfigured": bool(
             settings.arbitrator_llm

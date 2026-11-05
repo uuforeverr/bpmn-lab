@@ -84,12 +84,9 @@ Graph 的 Pydantic 定义在 `backend/app/domain.py`。持久化和模型交互�
 
 ### 3.2 Patch 与修复
 
-增量 Generator 返回局部 Graph Patch，而不是每轮重写完整图。Patch 合并采用“先删除、后插入/更新”的语义。结构化输出重试统一向模型提供：
+增量 Generator 返回局部 Graph Patch，而不是每轮重写完整图。Patch 合并采用“先删除、后插入/更新”的语义。无效 JSON 或未通过输出格式校验时，系统使用完全相同的原 Prompt 和原数据重新调用。
 
-- `previousInvalidOutput`：上一轮完整输出；
-- `issues`：精简错误提示及涉及的元素 ID；无法取得 ID 时包含该元素已有内容和错误类型。
-
-对应 Prompt 是 `generator_revision.md` 和 `output_validation_retry.md`。Repair 先由 `repair_plan` 形成语义修复计划，再通过受控编辑函数执行最小修改。达到修复上限时保留最后一次修复产物，使流程能够继续并留下审计记录，而不是直接丢弃本轮产物。
+Repair Agent 同样只操作当前累计图上的 Graph Patch，并按任务使用两份 Prompt：`repair_structure.md` 直接处理确定性结构校验与最终 Woflan 诊断，`repair_semantic.md` 独立审查 Reviewer findings 并修复接受项。不再使用 Repair Plan 或图编辑工具调用链。达到修复上限时保留最后一次修复产物和审计记录。
 
 ## 4. 生成流水线
 
@@ -104,9 +101,9 @@ SUBGRAPH_GENERATED
 CANDIDATE_APPLIED
 STRUCTURE_VALIDATED
 SEMANTIC_REVIEWED
-GENERATOR_RECONSIDERING / GENERATOR_DECIDED
+SEMANTIC_REPAIRING / SEMANTIC_REPAIR_DECIDED
 ARBITRATING
-REPAIRING / EDITS_GENERATED
+STRUCTURE_REPAIRING
 SEGMENT_COMMITTED
 FINAL_VALIDATED
 BPMN_GENERATED
@@ -119,7 +116,7 @@ COMPLETED
 - Generator 接收当前片段、截至当前片段的完整描述前缀，以及完整已提交 Graph。
 - Patch 先在副本上原子应用，候选图通过后才提交。
 - Reviewer 只检查流程语义；确定性校验器负责结构错误。
-- Generator 可以接受或拒绝 Reviewer finding，但拒绝必须给出文本依据。
+- Repair Agent 可以接受或拒绝 Reviewer finding，但拒绝必须给出文本依据。
 - 多轮讨论仍未解决的 finding 交给独立配置的 Arbitration 模型。
 - 每次模型调用、重试、token、耗时、修复和审查历史写入运行状态与 SQLite。
 
@@ -158,12 +155,10 @@ backend/prompts/en/*.md    # 英文
 - `planner.md`：语义分段；
 - `generator.md`：增量 Graph Patch；
 - `generator_oneshot.md`：前置实验的一次完整生成；
-- `generator_revision.md`：Generator 针对 Reviewer finding 的判断与最小修订；
+- `repair_semantic.md`：Repair Agent 对 Reviewer finding 的判断与最小修订；
+- `repair_structure.md`：Repair Agent 对确定性结构问题及终局 Woflan 诊断的直接修复；
 - `reviewer.md`：语义一致性检查；
-- `arbitrator.md`：未解决争议的裁决；
-- `repair_plan.md`：结构问题修复计划；
-- `repair.md`：受控编辑函数执行；
-- `output_validation_retry.md`：结构化输出格式错误的统一重试模板。
+- `arbitrator.md`：未解决争议的裁决。
 
 配置文件：
 
@@ -172,7 +167,7 @@ backend/prompts/en/*.md    # 英文
 - `backend/.env`：本机环境变量，不应提交；
 - `backend/.env.example`：环境变量模板。
 
-当前本机配置使用主模型 `deepseek-flash`，Arbitration 使用 `deepseek-v4-pro`；`repair_plan` 保持思考模式并具有更高输出上限。模型名取决于当前代理服务，复现实验时应以冻结配置和原始结果 manifest 为准。
+当前本机配置使用主模型 `deepseek-flash`，Arbitration 使用 `deepseek-v4-pro`；Repair Agent 保持思考模式并具有更高输出上限。模型名取决于当前代理服务，复现实验时应以冻结配置和原始结果 manifest 为准。
 
 设置密钥：
 

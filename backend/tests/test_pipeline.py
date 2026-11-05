@@ -10,8 +10,28 @@ from app.pipeline import AgentOutputValidationError, Pipeline
 from app.validation import validate_graph
 
 
-def test_repair_edits_are_applied_to_candidate_graph():
-    pipeline = Pipeline(Settings())
+def test_structure_repair_patch_is_applied_to_candidate_graph():
+    class FakeRepair:
+        def complete(self, messages, tools=False, repair=False, agent=""):
+            assert agent == "repair"
+            assert tools is False
+            return LlmResult(content=json.dumps({
+                "addNodes": [{
+                    "id": "right", "type": "task", "name": "Right",
+                    "sourceSentences": ["S1"],
+                }],
+                "addEdges": [{
+                    "id": "flow_start_to_right", "source": "start", "target": "right",
+                    "sourceSentences": ["S1"],
+                }],
+                "removeNodeIds": ["wrong"],
+                "removeEdgeIds": ["flow_start_to_wrong"],
+            }), tool_calls=[], usage={}, latency_ms=1, raw={})
+
+    settings = Settings()
+    settings.pipeline.reviewer_enabled = True
+    pipeline = Pipeline(settings)
+    pipeline.llm = FakeRepair()
     committed = Graph()
     candidate = apply_edits(committed, [EditCall(name="add_linear_sequence", arguments={"nodes": [
         {"id": "start", "name": "Start", "type": "startEvent", "sourceSentences": ["S1"]},
@@ -20,38 +40,42 @@ def test_repair_edits_are_applied_to_candidate_graph():
     state = pipeline.initial_state("Do the right task.", "single_segment")
     state.update({
         "segments": [{"id": "P1", "start": "S1", "end": "S1", "title": "Task", "sentenceIds": ["S1"]}],
+        "sentences": [{"id": "S1", "text": "Do the right task."}],
         "graph": committed.model_dump(),
         "candidate": candidate.model_dump(),
-        "edits": [
-            EditCall(name="delete_edge", arguments={"targetId": "flow_start_to_wrong"}).model_dump(),
-            EditCall(name="delete_node", arguments={"targetId": "wrong"}).model_dump(),
-            EditCall(name="add_linear_sequence", arguments={
-                "predecessorId": "start",
-                "nodes": [{"id": "right", "type": "task", "name": "Right", "sourceSentences": ["S1"]}],
-            }).model_dump(),
-        ],
-        "applyingRepair": True,
+        "issues": [{"code": "WRONG_TASK", "message": "Replace wrong task."}],
     })
 
-    stage, updated = pipeline.step("EDITS_GENERATED", state, "Do the right task.")
+    stage, updated = pipeline.step("STRUCTURE_REPAIRING", state, "Do the right task.")
 
     assert stage == "CANDIDATE_APPLIED"
     assert {node["id"] for node in updated["candidate"]["nodes"]} == {"start", "right"}
     assert updated["candidate"]["edges"][0]["id"] == "flow_start_to_right"
+    assert updated["repairHistory"][-1]["patch"] == updated["structureRepairPatch"]
 
 
-def test_invalid_edit_becomes_repair_issue_instead_of_crashing():
+def test_invalid_structure_repair_patch_is_retried_without_changing_candidate():
+    class InvalidRepair:
+        def complete(self, messages, tools=False, repair=False, agent=""):
+            return LlmResult(content=json.dumps({
+                "addNodes": [], "addEdges": [],
+                "removeNodeIds": ["missing"], "removeEdgeIds": [],
+            }), tool_calls=[], usage={}, latency_ms=1, raw={})
+
     pipeline = Pipeline(Settings())
+    pipeline.llm = InvalidRepair()
     state = pipeline.initial_state("Do a task.", "single_segment")
     state.update({
         "segments": [{"id": "P1", "start": "S1", "end": "S1", "title": "Task", "sentenceIds": ["S1"]}],
-        "edits": [EditCall(name="delete_edge", arguments={"targetId": "missing"}).model_dump()],
+        "sentences": [{"id": "S1", "text": "Do a task."}],
+        "candidate": Graph().model_dump(),
+        "issues": [{"code": "MISSING_TASK", "message": "Add task."}],
     })
 
-    stage, updated = pipeline.step("EDITS_GENERATED", state, "Do a task.")
-
-    assert stage == "REPAIRING"
-    assert updated["issues"][0]["code"] == "EDIT_APPLICATION_FAILED"
+    with pytest.raises(ValueError, match="repair failed after"):
+        pipeline.step("STRUCTURE_REPAIRING", state, "Do a task.")
+    assert state["candidate"] == Graph().model_dump()
+    assert len(state["agentFailures"]) == 3
 
 
 def test_reviewer_receives_only_description_prefix_and_compact_candidate_graph():
@@ -138,7 +162,7 @@ def test_disabled_reviewer_commits_after_structure_validation_without_an_llm_cal
     assert state["graph"]["metadata"]["processedSegments"] == ["P1"]
 
 
-def test_reviewer_finding_is_sent_to_generate_and_can_be_rejected():
+def test_reviewer_finding_is_sent_to_repair_and_can_be_rejected():
     finding = {
         "id": "R1", "message": "The order is unsupported.",
         "elementIds": ["work"], "sourceSentences": ["S1"],
@@ -180,9 +204,9 @@ def test_reviewer_finding_is_sent_to_generate_and_can_be_rejected():
     stage, state = pipeline.step("STRUCTURE_VALIDATED", state, "Work.")
     assert stage == "SEMANTIC_REVIEWED"
     stage, state = pipeline.step(stage, state, "Work.")
-    assert stage == "GENERATOR_RECONSIDERING"
+    assert stage == "SEMANTIC_REPAIRING"
     stage, state = pipeline.step(stage, state, "Work.")
-    assert stage == "GENERATOR_DECIDED"
+    assert stage == "SEMANTIC_REPAIR_DECIDED"
     stage, state = pipeline.step(stage, state, "Work.")
 
     assert stage == "STRUCTURE_VALIDATED"
@@ -193,7 +217,7 @@ def test_reviewer_finding_is_sent_to_generate_and_can_be_rejected():
     assert state["graph"] == candidate.model_copy(update={
         "metadata": candidate.metadata.model_copy(update={"processedSegments": ["P1"]})
     }).model_dump()
-    assert state["reviewDiscussionHistory"][0]["generatorDecisions"][0]["reason"]
+    assert state["reviewDiscussionHistory"][0]["repairDecisions"][0]["reason"]
     assert state["repairHistory"] == []
 
 
@@ -247,9 +271,9 @@ def test_three_unresolved_discussion_rounds_are_sent_to_arbitration():
         stage, state = pipeline.step(stage, state, "Work.")
         assert stage == "SEMANTIC_REVIEWED"
         stage, state = pipeline.step(stage, state, "Work.")
-        assert stage == "GENERATOR_RECONSIDERING"
+        assert stage == "SEMANTIC_REPAIRING"
         stage, state = pipeline.step(stage, state, "Work.")
-        assert stage == "GENERATOR_DECIDED"
+        assert stage == "SEMANTIC_REPAIR_DECIDED"
         stage, state = pipeline.step(stage, state, "Work.")
     assert stage == "ARBITRATING"
 
@@ -280,12 +304,12 @@ def test_arbitrator_acceptance_is_binding_and_uses_the_arbitrator_client():
                 "findingId": "R1", "decision": "accept", "reason": "S1 uses the explicit action name.",
             }]}), tool_calls=[], usage={}, latency_ms=1, raw={})
 
-    class FakeGenerator:
+    class FakeRepair:
         def __init__(self):
             self.calls = 0
 
         def complete(self, messages, tools=False, repair=False, agent=""):
-            assert agent == "generator"
+            assert agent == "repair"
             self.calls += 1
             payload = json.loads(messages[1]["content"])
             assert payload["arbitrationDecisions"][0]["decision"] == "accept"
@@ -302,7 +326,7 @@ def test_arbitrator_acceptance_is_binding_and_uses_the_arbitrator_client():
     settings = Settings()
     settings.pipeline.reviewer_enabled = True
     pipeline = Pipeline(settings)
-    pipeline.llm = FakeGenerator()
+    pipeline.llm = FakeRepair()
     pipeline.arbitrator_llm = FakeArbitrator()
     candidate = apply_edits(Graph(), [EditCall(name="add_task", arguments={
         "id": "work", "name": "Work", "sourceSentences": ["S1"],
@@ -316,14 +340,14 @@ def test_arbitrator_acceptance_is_binding_and_uses_the_arbitrator_client():
         "pendingArbitrationFindings": [finding],
         "reviewDiscussionHistory": [{
             "segmentId": "P1", "round": 3, "reviewFindings": [finding],
-            "generatorDecisions": [{"findingId": "R1", "decision": "reject", "reason": "Old reason"}],
+            "repairDecisions": [{"findingId": "R1", "decision": "reject", "reason": "Old reason"}],
         }],
     })
 
     stage, state = pipeline.step("ARBITRATING", state, "Perform work.")
-    assert stage == "GENERATOR_RECONSIDERING"
+    assert stage == "SEMANTIC_REPAIRING"
     stage, state = pipeline.step(stage, state, "Perform work.")
-    assert stage == "GENERATOR_DECIDED"
+    assert stage == "SEMANTIC_REPAIR_DECIDED"
     stage, state = pipeline.step(stage, state, "Perform work.")
 
     assert stage == "CANDIDATE_APPLIED"
@@ -338,10 +362,10 @@ def test_arbitrator_acceptance_is_binding_and_uses_the_arbitrator_client():
     assert pipeline.llm.calls == 1
 
 
-def test_invalid_generator_revision_cannot_bypass_binding_arbitration():
-    class InvalidGenerator:
+def test_invalid_repair_semantic_cannot_bypass_binding_arbitration():
+    class InvalidRepair:
         def complete(self, messages, tools=False, repair=False, agent="default"):
-            assert agent == "generator"
+            assert agent == "repair"
             return LlmResult(content=json.dumps({
                 "decisions": [{
                     "findingId": "f1",
@@ -354,7 +378,7 @@ def test_invalid_generator_revision_cannot_bypass_binding_arbitration():
     settings = Settings()
     settings.pipeline.reviewer_enabled = True
     pipeline = Pipeline(settings)
-    pipeline.llm = InvalidGenerator()
+    pipeline.llm = InvalidRepair()
     graph = apply_edits(Graph(), [EditCall(name="add_task", arguments={
         "id": "work", "name": "Work", "sourceSentences": ["S1"],
     })], "P1")
@@ -378,13 +402,13 @@ def test_invalid_generator_revision_cannot_bypass_binding_arbitration():
         }],
     })
 
-    with pytest.raises(ValueError, match="generator failed after"):
-        pipeline.step("GENERATOR_RECONSIDERING", state, "Perform work.")
+    with pytest.raises(ValueError, match="repair failed after"):
+        pipeline.step("SEMANTIC_REPAIRING", state, "Perform work.")
     assert state["candidate"] == graph.model_dump()
     assert "P1" not in state["graph"]["metadata"]["processedSegments"]
 
 
-def test_generate_can_accept_a_finding_and_rewrite_an_existing_edge_with_a_patch():
+def test_repair_can_accept_a_finding_and_rewrite_an_existing_edge_with_a_patch():
     finding = {
         "id": "R1",
         "message": "Packaging and documents must be independent.",
@@ -398,7 +422,7 @@ def test_generate_can_accept_a_finding_and_rewrite_an_existing_edge_with_a_patch
             self.messages = None
 
         def complete(self, messages, tools=False, repair=False, agent=""):
-            assert agent == "generator"
+            assert agent == "repair"
             self.calls += 1
             self.messages = messages
             content = {
@@ -452,8 +476,8 @@ def test_generate_can_accept_a_finding_and_rewrite_an_existing_edge_with_a_patch
         "reviewFindings": [finding],
     })
 
-    stage, state = pipeline.step("GENERATOR_RECONSIDERING", state, state["strategy"])
-    assert stage == "GENERATOR_DECIDED"
+    stage, state = pipeline.step("SEMANTIC_REPAIRING", state, state["strategy"])
+    assert stage == "SEMANTIC_REPAIR_DECIDED"
     stage, state = pipeline.step(stage, state, state["strategy"])
 
     assert stage == "CANDIDATE_APPLIED"
@@ -465,16 +489,16 @@ def test_generate_can_accept_a_finding_and_rewrite_an_existing_edge_with_a_patch
     revision_payload = json.loads(pipeline.llm.messages[1]["content"])
     assert set(revision_payload) == {"descriptionPrefix", "candidateGraph", "findings"}
     assert set(revision_payload["candidateGraph"]) == {"nodes", "edges"}
-    assert pipeline.llm.messages[0]["content"] == prompt("generator_revision")
+    assert pipeline.llm.messages[0]["content"] == prompt("repair_semantic")
 
 
-def test_generator_revision_patch_leaves_graph_structure_to_the_shared_validator():
+def test_repair_semantic_patch_leaves_graph_structure_to_the_shared_validator():
     candidate = apply_edits(Graph(), [
         EditCall(name="add_event", arguments={"id": "start", "name": "Start", "type": "startEvent"}),
         EditCall(name="add_task", arguments={"id": "package", "name": "Package"}),
         EditCall(name="add_edge", arguments={"id": "f_start_package", "source": "start", "target": "package"}),
     ], "P1")
-    patch = Pipeline._validate_generator_revision_patch({
+    patch = Pipeline._validate_repair_patch({
         "addNodes": [],
         "addEdges": [{
             "id": "f_start_package", "source": "start", "target": "start",
@@ -504,15 +528,15 @@ def test_generator_revision_patch_leaves_graph_structure_to_the_shared_validator
     assert stage == "STRUCTURE_VALIDATED"
     assert any(issue["code"] == "UNREACHABLE" for issue in state["issues"])
     stage, _ = pipeline.step(stage, state, "Package.")
-    assert stage == "REPAIRING"
+    assert stage == "STRUCTURE_REPAIRING"
 
 
-def test_generator_revision_patch_rejects_a_no_op_revision():
+def test_repair_semantic_patch_rejects_a_no_op_revision():
     candidate = apply_edits(Graph(), [EditCall(name="add_task", arguments={
         "id": "work", "name": "Work", "sourceSentences": ["S1"],
     })], "P1")
     with pytest.raises(ValueError, match="必须实际改变"):
-        Pipeline._validate_generator_revision_patch({
+        Pipeline._validate_repair_patch({
             "addNodes": [{"id": "work", "type": "task", "name": "Work", "sourceSentences": ["S1"]}],
             "addEdges": [], "removeNodeIds": ["work"], "removeEdgeIds": [],
         }, candidate)
@@ -532,13 +556,13 @@ def test_disabling_reviewer_exits_an_existing_review_stage_and_commits_candidate
         "candidate": candidate.model_dump(),
         "reviewerEnabled": True,
         "reviewFindings": [{"id": "R1", "message": "Old finding"}],
-        "generatorRevision": {
+        "semanticRepair": {
             "decisions": [{"findingId": "R1", "decision": "accept", "reason": "Old decision"}],
             "patch": {"addNodes": [], "addEdges": [], "removeNodeIds": [], "removeEdgeIds": []},
         },
     })
 
-    stage, state = pipeline.step("GENERATOR_DECIDED", state, "Work.")
+    stage, state = pipeline.step("SEMANTIC_REPAIR_DECIDED", state, "Work.")
 
     assert stage == "SEGMENT_COMMITTED"
     assert state["reviewerEnabled"] is False
@@ -546,7 +570,7 @@ def test_disabling_reviewer_exits_an_existing_review_stage_and_commits_candidate
     assert state["graph"]["metadata"]["processedSegments"] == ["P1"]
 
 
-def test_generator_revision_exhaustion_keeps_candidate_and_continues():
+def test_repair_semantic_exhaustion_keeps_candidate_and_continues():
     finding = {
         "id": "R1", "message": "Change the order.",
         "elementIds": ["work"], "sourceSentences": ["S1"],
@@ -579,13 +603,13 @@ def test_generator_revision_exhaustion_keeps_candidate_and_continues():
         "reviewFindings": [finding],
     })
 
-    stage, state = pipeline.step("GENERATOR_RECONSIDERING", state, "Work.")
+    stage, state = pipeline.step("SEMANTIC_REPAIRING", state, "Work.")
 
     assert stage == "SEGMENT_COMMITTED"
     assert state["graph"]["nodes"] == candidate.model_dump()["nodes"]
-    assert len([item for item in state["agentFailures"] if item["agent"] == "generator"]) == 3
-    assert state["reviewRevisionFailures"][-1]["candidateRetained"] is True
-    assert state["reviewWarnings"][-1]["code"] == "REVIEW_REVISION_FAILED"
+    assert len([item for item in state["agentFailures"] if item["agent"] == "repair"]) == 3
+    assert state["semanticRepairFailures"][-1]["candidateRetained"] is True
+    assert state["reviewWarnings"][-1]["code"] == "SEMANTIC_REPAIR_FAILED"
 
 
 def test_review_revision_cycle_limit_keeps_candidate_and_continues():
@@ -601,14 +625,14 @@ def test_review_revision_cycle_limit_keeps_candidate_and_continues():
         "segments": [{"id": "P1", "start": "S1", "end": "S1", "title": "Work", "sentenceIds": ["S1"]}],
         "candidate": candidate.model_dump(),
         "reviewFindings": [{"id": "R1", "message": "Still wrong"}],
-        "reviewRevisionCount": 2,
+        "semanticRepairCount": 2,
     })
 
     stage, state = pipeline.step("SEMANTIC_REVIEWED", state, "Work.")
 
     assert stage == "SEGMENT_COMMITTED"
-    assert state["reviewRevisionFailures"][-1]["candidateRetained"] is True
-    assert "达到上限 2" in state["reviewRevisionFailures"][-1]["message"]
+    assert state["semanticRepairFailures"][-1]["candidateRetained"] is True
+    assert "达到上限 2" in state["semanticRepairFailures"][-1]["message"]
 
 
 def test_generator_returns_an_atomic_subgraph_without_edit_tools():
@@ -644,7 +668,7 @@ def test_generator_returns_an_atomic_subgraph_without_edit_tools():
     assert pipeline.llm.calls[0]["agent"] == "generator"
     assert pipeline.llm.calls[0]["tools"] is False
     assert pipeline.llm.calls[0]["repair"] is False
-    assert state["edits"] == []
+    assert "edits" not in state
     assert state["subgraph"]["removeNodeIds"] == []
     assert state["subgraph"]["removeEdgeIds"] == []
 
@@ -862,7 +886,7 @@ def test_generator_retry_exhaustion_routes_last_invalid_patch_to_repair_loop():
 
     stage, updated = pipeline.step("CONTEXT_BUILT", state, "Work.")
 
-    assert stage == "REPAIRING"
+    assert stage == "STRUCTURE_REPAIRING"
     assert updated["candidate"] == updated["graph"]
     assert updated["subgraph"] == invalid_patch
     assert updated["issues"][0]["missingEndpoints"] == ["finish_missing"]
@@ -941,21 +965,18 @@ def test_candidate_structure_validation_keeps_non_final_gateway_degree_non_block
 def test_repair_can_complete_an_invalid_generated_batch_and_pass_structure_validation():
     class FakeRepairLlm:
         def complete(self, messages, tools=False, repair=False, agent=""):
-            if not tools:
-                return LlmResult(
-                    content=json.dumps({"repairPlan": "Add the missing rejected branch from choice."}),
-                    tool_calls=[], usage={}, latency_ms=1, raw={},
-                )
-            assert tools is True and repair is True and agent == "repair"
-            return LlmResult(content=None, tool_calls=[
-                EditCall(name="add_task", arguments={
-                    "id": "rejected", "name": "Reject", "sourceSentences": ["S2"],
-                }),
-                EditCall(name="add_edge", arguments={
+            assert tools is False and agent == "repair"
+            return LlmResult(content=json.dumps({
+                "addNodes": [{
+                    "id": "rejected", "type": "task", "name": "Reject",
+                    "sourceSentences": ["S2"],
+                }],
+                "addEdges": [{
                     "id": "f_choice_rejected", "source": "choice", "target": "rejected",
                     "condition": {"label": "not approved"}, "sourceSentences": ["S2"],
-                }),
-            ], usage={}, latency_ms=1, raw={})
+                }],
+                "removeNodeIds": [], "removeEdgeIds": [],
+            }), tool_calls=[], usage={}, latency_ms=1, raw={})
 
     pipeline = Pipeline(Settings())
     pipeline.llm = FakeRepairLlm()
@@ -989,9 +1010,7 @@ def test_repair_can_complete_an_invalid_generated_batch_and_pass_structure_valid
         "issues": [{"code": "BATCH_GATEWAY_DEGREE", "message": "complete the split"}],
     })
 
-    stage, state = pipeline.step("REPAIRING", state, "Review. Decide.")
-    assert stage == "EDITS_GENERATED"
-    stage, state = pipeline.step("EDITS_GENERATED", state, "Review. Decide.")
+    stage, state = pipeline.step("STRUCTURE_REPAIRING", state, "Review. Decide.")
     assert stage == "CANDIDATE_APPLIED"
     stage, state = pipeline.step("CANDIDATE_APPLIED", state, "Review. Decide.")
 
@@ -1022,7 +1041,7 @@ def test_final_segment_candidate_receives_final_structure_validation_before_revi
         "END_COUNT", "TASK_MISSING_OUTGOING",
     }
     stage, _ = pipeline.step("STRUCTURE_VALIDATED", state, "Work.")
-    assert stage == "REPAIRING"
+    assert stage == "STRUCTURE_REPAIRING"
 
 
 def test_final_segment_keeps_incomplete_gateway_degree_blocking():
@@ -1083,8 +1102,8 @@ def test_generate_prompt_contains_minimal_input_graph_knowledge_and_three_exampl
     assert content.count("## Example") == 2
 
 
-def test_generator_revision_prompt_adjudicates_findings_and_returns_a_patch_directly():
-    content = prompt("generator_revision")
+def test_repair_semantic_prompt_adjudicates_findings_and_returns_a_patch_directly():
+    content = prompt("repair_semantic")
 
     assert "独立判断每个语义问题是否成立" in content
     assert "不得盲从语义审查结果" in content
@@ -1132,21 +1151,20 @@ def test_reviewer_prompt_requires_direct_evidence_and_accepts_reasonable_equival
     assert "Start 或 End" not in content
 
 
-def test_repair_uses_edit_tools_and_a_distinct_prompt():
+def test_structure_repair_uses_direct_graph_patch_and_a_distinct_prompt():
     class FakeLlm:
         def __init__(self):
             self.calls = []
 
         def complete(self, messages, tools=False, repair=False, agent=""):
             self.calls.append({"messages": messages, "tools": tools, "repair": repair, "agent": agent})
-            if not tools:
-                return LlmResult(
-                    content=json.dumps({"repairPlan": "Add and connect the missing task."}),
-                    tool_calls=[], usage={}, latency_ms=1, raw={},
-                )
-            return LlmResult(content=None, tool_calls=[EditCall(name="add_task", arguments={
-                "id": "fixed", "name": "Fixed", "sourceSentences": ["S1"],
-            })], usage={}, latency_ms=1, raw={})
+            return LlmResult(content=json.dumps({
+                "addNodes": [{
+                    "id": "fixed", "type": "task", "name": "Fixed",
+                    "sourceSentences": ["S1"],
+                }],
+                "addEdges": [], "removeNodeIds": [], "removeEdgeIds": [],
+            }), tool_calls=[], usage={}, latency_ms=1, raw={})
 
     pipeline = Pipeline(Settings())
     pipeline.llm = FakeLlm()
@@ -1159,42 +1177,44 @@ def test_repair_uses_edit_tools_and_a_distinct_prompt():
         "issues": [{"code": "WRONG", "message": "Fix it"}],
     })
 
-    stage, updated = pipeline.step("REPAIRING", state, "Work.")
-    plan_call, edit_call = pipeline.llm.calls
-    system_prompt = edit_call["messages"][0]["content"]
-    plan_payload = json.loads(plan_call["messages"][1]["content"])
-    repair_payload = json.loads(edit_call["messages"][1]["content"])
+    stage, updated = pipeline.step("STRUCTURE_REPAIRING", state, "Work.")
+    repair_call = pipeline.llm.calls[0]
+    repair_payload = json.loads(repair_call["messages"][1]["content"])
 
-    assert stage == "EDITS_GENERATED"
-    assert plan_call["messages"][0]["content"] == prompt("repair_plan")
-    assert plan_call["agent"] == "repair_plan"
-    assert plan_call["tools"] is False
-    assert edit_call["agent"] == "repair"
-    assert edit_call["tools"] is True
-    assert edit_call["repair"] is True
-    assert system_prompt == prompt("repair")
-    assert set(plan_payload) == {"descriptionPrefix", "candidateGraph", "issues"}
-    assert set(plan_payload["candidateGraph"]) == {"nodes", "edges"}
-    assert set(repair_payload) == {"candidateGraph", "issues", "repairPlan"}
+    assert stage == "CANDIDATE_APPLIED"
+    assert repair_call["agent"] == "repair"
+    assert repair_call["tools"] is False
+    assert repair_call["messages"][0]["content"] == prompt("repair_structure")
+    assert set(repair_payload) == {"descriptionPrefix", "candidateGraph", "issues"}
     assert set(repair_payload["candidateGraph"]) == {"nodes", "edges"}
-    assert repair_payload["repairPlan"] == "Add and connect the missing task."
-    assert prompt("repair") != prompt("generator")
-    assert "update_edge" in prompt("repair")
-    assert "严格执行已经确定的修复计划" in prompt("repair")
-    assert "本阶段不重新设计修复方案" in prompt("repair")
-    assert "最小连通修改" in prompt("repair_plan")
-    assert "保留完整流程描述支持的业务节点和路径" in prompt("repair_plan")
-    assert "source -> target" in prompt("repair_plan")
-    assert "不能把更早的串行业务动作带入并行区域" in prompt("repair_plan")
-    assert "JSON 对象" in prompt("repair_plan")
+    assert prompt("repair_structure") != prompt("generator")
+    assert "最小增删操作" in prompt("repair_structure")
+    assert "结构校验结果是必须处理的事实" in prompt("repair_structure")
+    assert "source -> target" in prompt("repair_structure")
+    assert "不进行语义审查" in prompt("repair_structure")
     assert '"nodes"' in prompt("generator") and '"edges"' in prompt("generator")
-    assert updated["repairPlan"] == "Add and connect the missing task."
-    assert updated["repairHistory"][-1]["repairPlan"] == updated["repairPlan"]
-    assert updated["repairHistory"][-1]["edits"] == updated["edits"]
+    assert updated["repairHistory"][-1]["mode"] == "structure"
+    assert updated["repairHistory"][-1]["patch"] == updated["structureRepairPatch"]
 
 
 def test_final_validation_issues_enter_repair_and_can_be_closed():
+    class FakeRepair:
+        def complete(self, messages, tools=False, repair=False, agent=""):
+            assert agent == "repair"
+            return LlmResult(content=json.dumps({
+                "addNodes": [{
+                    "id": "end", "name": "End", "type": "endEvent",
+                    "sourceSentences": ["S1"],
+                }],
+                "addEdges": [{
+                    "id": "flow_work_to_end", "source": "work", "target": "end",
+                    "sourceSentences": ["S1"],
+                }],
+                "removeNodeIds": [], "removeEdgeIds": [],
+            }), tool_calls=[], usage={}, latency_ms=1, raw={})
+
     pipeline = Pipeline(Settings())
+    pipeline.llm = FakeRepair()
     graph = apply_edits(Graph(), [EditCall(name="add_linear_sequence", arguments={"nodes": [
         {"id": "start", "name": "Start", "type": "startEvent", "sourceSentences": ["S1"]},
         {"id": "work", "type": "task", "name": "Work", "sourceSentences": ["S1"]},
@@ -1208,7 +1228,7 @@ def test_final_validation_issues_enter_repair_and_can_be_closed():
     })
 
     stage, state = pipeline.step("SEGMENT_COMMITTED", state, "Work.")
-    assert stage == "REPAIRING"
+    assert stage == "STRUCTURE_REPAIRING"
     assert {item["code"] for item in state["issues"]} == {
         "END_COUNT", "TASK_MISSING_OUTGOING",
     }
@@ -1218,12 +1238,7 @@ def test_final_validation_issues_enter_repair_and_can_be_closed():
     assert leaf_issue["elementIds"] == ["work"]
     assert "End Event" in leaf_issue["message"]
 
-    state["edits"] = [EditCall(name="add_linear_sequence", arguments={
-        "predecessorId": "work",
-        "nodes": [{"id": "end", "name": "End", "type": "endEvent", "sourceSentences": ["S1"]}],
-    }).model_dump()]
-    state["applyingRepair"] = True
-    stage, state = pipeline.step("EDITS_GENERATED", state, "Work.")
+    stage, state = pipeline.step("STRUCTURE_REPAIRING", state, "Work.")
 
     assert stage == "FINAL_VALIDATED"
     assert state["issues"] == []
@@ -1241,6 +1256,21 @@ def test_final_validation_issues_enter_repair_and_can_be_closed():
 
 
 def test_final_unsound_graph_enters_woflan_guided_repair_and_rechecks(monkeypatch):
+    class FakeRepair:
+        def __init__(self):
+            self.calls = []
+
+        def complete(self, messages, tools=False, repair=False, agent=""):
+            self.calls.append({"agent": agent, "messages": messages})
+            assert agent == "repair"
+            return LlmResult(content=json.dumps({
+                "addNodes": [{
+                    "id": "work", "name": "Work repaired", "type": "task",
+                    "sourceSentences": ["S1"],
+                }],
+                "addEdges": [], "removeNodeIds": ["work"], "removeEdgeIds": [],
+            }), tool_calls=[], usage={}, latency_ms=1, raw={})
+
     results = iter([
         {
             "protocol": "test-woflan",
@@ -1267,7 +1297,10 @@ def test_final_unsound_graph_enters_woflan_guided_repair_and_rechecks(monkeypatc
         },
     ])
     monkeypatch.setattr("app.pipeline.assess_soundness", lambda _xml: next(results))
-    pipeline = Pipeline(Settings())
+    settings = Settings()
+    settings.pipeline.reviewer_enabled = True
+    pipeline = Pipeline(settings)
+    pipeline.llm = FakeRepair()
     graph = apply_edits(Graph(), [EditCall(name="add_linear_sequence", arguments={"nodes": [
         {"id": "start", "name": "Start", "type": "startEvent", "sourceSentences": ["S1"]},
         {"id": "work", "name": "Work", "type": "task", "sourceSentences": ["S1"]},
@@ -1283,20 +1316,14 @@ def test_final_unsound_graph_enters_woflan_guided_repair_and_rechecks(monkeypatc
 
     stage, state = pipeline.step("FINAL_VALIDATED", state, "Work.")
 
-    assert stage == "REPAIRING"
+    assert stage == "STRUCTURE_REPAIRING"
     assert state["soundnessRepairing"] is True
     assert state["issues"][0]["code"] == "WORKFLOW_NET_UNSOUND"
     assert state["soundnessPromptDiagnostics"]["uncoveredPlacesSComponent"] == ["flow_loop"]
     assert "s_c_net" not in state["soundnessPromptDiagnostics"]
     assert state["context"]["descriptionPrefix"] == [{"id": "S1", "text": "Work."}]
 
-    state["edits"] = [EditCall(name="update_node", arguments={
-        "targetId": "work", "changes": {"name": "Work repaired"},
-    }).model_dump()]
-    state["applyingRepair"] = True
-    state["repairCount"] = 1
-    state["soundnessRepairCount"] = 1
-    stage, state = pipeline.step("EDITS_GENERATED", state, "Work.")
+    stage, state = pipeline.step("STRUCTURE_REPAIRING", state, "Work.")
     assert stage == "FINAL_VALIDATED"
 
     stage, state = pipeline.step(stage, state, "Work.")
@@ -1306,6 +1333,7 @@ def test_final_unsound_graph_enters_woflan_guided_repair_and_rechecks(monkeypatc
     assert state["soundnessRepairCount"] == 1
     assert len(state["soundnessHistory"]) == 2
     assert state["snapshots"][-1]["soundness"]["sound"] is True
+    assert [call["agent"] for call in pipeline.llm.calls] == ["repair"]
 
 
 def test_soundness_repair_limit_preserves_completion_and_delivers_unsound_artifact(monkeypatch):
@@ -1363,7 +1391,7 @@ def test_soundness_repair_agent_failure_preserves_completion(monkeypatch):
     state["graph"] = graph.model_dump()
 
     stage, state = pipeline.step("FINAL_VALIDATED", state, "Work.")
-    assert stage == "REPAIRING"
+    assert stage == "STRUCTURE_REPAIRING"
 
     stage, state = pipeline.step(stage, state, "Work.")
     assert stage == "FINAL_VALIDATED"
@@ -1378,7 +1406,7 @@ def test_soundness_repair_agent_failure_preserves_completion(monkeypatch):
 
 def test_repair_limit_retains_latest_segment_candidate_and_continues():
     settings = Settings()
-    settings.pipeline.max_semantic_repairs = 2
+    settings.pipeline.max_structure_repairs = 2
     pipeline = Pipeline(settings)
     candidate = apply_edits(Graph(), [EditCall(name="add_linear_sequence", arguments={"nodes": [
         {"id": "start", "name": "Start", "type": "startEvent", "sourceSentences": ["S1"]},
@@ -1393,7 +1421,7 @@ def test_repair_limit_retains_latest_segment_candidate_and_continues():
         "repairCount": 2,
     })
 
-    stage, state = pipeline.step("REPAIRING", state, "Work.")
+    stage, state = pipeline.step("STRUCTURE_REPAIRING", state, "Work.")
 
     assert stage == "SEGMENT_COMMITTED"
     assert state["graph"]["nodes"] == candidate.model_dump()["nodes"]
@@ -1406,7 +1434,7 @@ def test_repair_limit_retains_latest_segment_candidate_and_continues():
 
 def test_finalization_repair_limit_retains_latest_candidate_and_generates_output():
     settings = Settings()
-    settings.pipeline.max_semantic_repairs = 1
+    settings.pipeline.max_structure_repairs = 1
     settings.pipeline.max_soundness_repairs = 0
     pipeline = Pipeline(settings)
     candidate = apply_edits(Graph(), [EditCall(name="add_linear_sequence", arguments={"nodes": [
@@ -1423,7 +1451,7 @@ def test_finalization_repair_limit_retains_latest_candidate_and_generates_output
         "finalizing": True,
     })
 
-    stage, state = pipeline.step("REPAIRING", state, "Work.")
+    stage, state = pipeline.step("STRUCTURE_REPAIRING", state, "Work.")
     assert stage == "FINAL_VALIDATED"
     assert state["graph"] == candidate.model_dump()
     assert state["repairLimitEvents"][-1]["finalization"] is True
@@ -1458,7 +1486,7 @@ def test_json_agent_retries_empty_content():
     assert state["llmCalls"][0]["contentChars"] == 0
 
 
-def test_repair_plan_empty_content_retries_with_the_same_request_options():
+def test_repair_empty_content_retries_with_the_same_request_options():
     class FakeLlm:
         def __init__(self):
             self.calls = []
@@ -1476,37 +1504,44 @@ def test_repair_plan_empty_content_retries_with_the_same_request_options():
     state = pipeline.initial_state("Work.", "semantic")
 
     value = pipeline._complete_json(
-        state, "repair_plan", [{"role": "user", "content": "repair"}]
+        state, "repair", [{"role": "user", "content": "repair"}]
     )
 
     assert value == {"strategy": "retry", "rationale": "ok"}
     assert pipeline.llm.calls == [
-        {"agent": "repair_plan"},
-        {"agent": "repair_plan"},
+        {"agent": "repair"},
+        {"agent": "repair"},
     ]
     assert [call["thinkingMode"] for call in state["llmCalls"]] == ["enabled", "enabled"]
 
 
-def test_tool_retry_repeats_the_original_prompt_and_data_verbatim():
+def test_repair_patch_retry_repeats_the_original_prompt_and_data_verbatim():
     class FakeLlm:
         def __init__(self):
             self.calls = []
 
         def complete(self, messages, tools=False, repair=False, agent="", **kwargs):
             self.calls.append(messages)
-            calls = [] if len(self.calls) == 1 else [EditCall(
-                name="add_task", arguments={"id": "task_fixed", "name": "Fixed"},
-            )]
-            return LlmResult(content=None, tool_calls=calls, usage={}, latency_ms=1, raw={})
+            content = "not json" if len(self.calls) == 1 else json.dumps({
+                "addNodes": [{
+                    "id": "task_fixed", "type": "task", "name": "Fixed",
+                    "sourceSentences": ["S1"],
+                }],
+                "addEdges": [], "removeNodeIds": [], "removeEdgeIds": [],
+            })
+            return LlmResult(content=content, tool_calls=[], usage={}, latency_ms=1, raw={})
 
     pipeline = Pipeline(Settings())
     pipeline.llm = FakeLlm()
     state = pipeline.initial_state("Fix.", "single_segment")
     messages = [{"role": "user", "content": "repair original graph"}]
 
-    result = pipeline._complete_tools(state, "repair", messages, repair=True)
+    result = pipeline._complete_json(
+        state, "repair", messages,
+        validator=lambda value: pipeline._validate_repair_patch(value, Graph()),
+    )
 
-    assert result.tool_calls[0].name == "add_task"
+    assert result["addNodes"][0]["id"] == "task_fixed"
     assert pipeline.llm.calls == [messages, messages]
 
 

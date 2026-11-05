@@ -12,13 +12,12 @@ llm:
   max_transport_retries: 2
   max_output_tokens: 8192
   max_output_tokens_by_agent:
-    repair_plan: 16384
+    repair: 16384
   max_tokens_parameter: max_tokens
   json_response_format: true
   parallel_tool_calls: true
   tool_choice: required
 
-  # Invalid/empty JSON automatically retries once with thinking disabled.
   thinking: disabled
   thinking_parameter: enable_thinking
   thinking_enabled_value: true
@@ -27,8 +26,7 @@ llm:
     planner: disabled
     generator: disabled
     reviewer: disabled
-    repair_plan: enabled
-    repair: disabled
+    repair: enabled
 
   extra_body: {}
   extra_body_by_agent: {}
@@ -57,6 +55,7 @@ layout:
 
 pipeline:
   max_semantic_repairs: 5
+  max_structure_repairs: 5
   fixed_length_sentences: 3
   max_agent_retries: 2
   reviewer_enabled: true

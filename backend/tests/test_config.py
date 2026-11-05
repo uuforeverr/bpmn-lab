@@ -102,7 +102,7 @@ def test_prompt_language_rejects_unsupported_values():
 def test_every_agent_prompt_has_an_english_counterpart():
     names = {
         "planner", "generator", "reviewer", "arbitrator",
-        "generator_revision", "generator_oneshot", "repair_plan", "repair",
+        "generator_oneshot", "repair_semantic", "repair_structure",
     }
 
     for name in names:
@@ -111,7 +111,7 @@ def test_every_agent_prompt_has_an_english_counterpart():
 
 
 def test_split_join_pairing_rule_is_synchronized_across_generator_prompts():
-    for name in {"generator", "generator_oneshot", "generator_revision"}:
+    for name in {"generator", "generator_oneshot", "repair_semantic", "repair_structure"}:
         zh = prompt(name, "zh")
         en = prompt(name, "en")
         assert "Parallel Split" in zh and "Parallel Join" in zh, name
@@ -122,9 +122,9 @@ def test_split_join_pairing_rule_is_synchronized_across_generator_prompts():
         assert "Inclusive Split" in en and "Inclusive Join" in en, name
 
 def test_loop_return_and_single_entry_rules_are_synchronized_across_prompts():
-    for name in {"generator", "repair_plan", "repair"}:
-        assert "循环回边" in prompt(name, "zh"), name
-        assert "loop-return edge" in prompt(name, "en"), name
+    for name in {"generator", "repair_semantic", "repair_structure"}:
+        assert "回边" in prompt(name, "zh"), name
+        assert "return edge" in prompt(name, "en"), name
         assert "只有" in prompt(name, "zh") and "endEvent" in prompt(name, "zh"), name
         assert "Only Join Gateways and End Events" in prompt(name, "en"), name
 
@@ -135,7 +135,7 @@ def test_semantic_review_prompts_follow_the_standard_section_order():
         "# Execution Rules", "# Output Format", "# Examples",
     ]
     for language in {"zh", "en"}:
-        for name in {"reviewer", "generator_revision"}:
+        for name in {"reviewer", "repair_semantic", "repair_structure"}:
             headings = [
                 line.strip() for line in prompt(name, language).splitlines()
                 if line.startswith("# ")
@@ -144,10 +144,10 @@ def test_semantic_review_prompts_follow_the_standard_section_order():
 
 
 def test_few_shots_are_limited_to_incremental_generation_prompts():
-    prompts_with_examples = {"generator": 2, "generator_revision": 1}
+    prompts_with_examples = {"generator": 2, "repair_semantic": 1}
     prompts_without_examples = {
         "planner", "reviewer", "arbitrator", "generator_oneshot",
-        "repair_plan", "repair",
+        "repair_structure",
     }
     for language in {"zh", "en"}:
         for name, expected_count in prompts_with_examples.items():
@@ -158,13 +158,13 @@ def test_few_shots_are_limited_to_incremental_generation_prompts():
 
 
 def test_agent_output_budget_falls_back_to_global_value():
-    config = LlmConfig(max_output_tokens=8192, max_output_tokens_by_agent={"repair_plan": 16384})
+    config = LlmConfig(max_output_tokens=8192, max_output_tokens_by_agent={"repair": 16384})
 
-    assert config.max_output_tokens_for("repair_plan") == 16384
+    assert config.max_output_tokens_for("repair") == 16384
     assert config.max_output_tokens_for("generator") == 8192
 
 def test_english_json_agents_explicitly_request_json():
-    for name in {"planner", "reviewer", "arbitrator", "generator_revision", "repair_plan"}:
+    for name in {"planner", "reviewer", "arbitrator", "repair_semantic", "repair_structure"}:
         assert "json" in prompt(name, "en").lower(), name
 
 
